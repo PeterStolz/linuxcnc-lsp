@@ -1,6 +1,6 @@
 import { Diagnostic } from 'vscode-languageserver-types';
 import {
-  collectIniRefs, findSection, findEntries, HalToken,
+  collectIniRefs, findSection, findEntries, HalToken, SetpStatement,
   DiagnosticSink, SuppressionIndex, SeverityName,
 } from '@linuxcnc/core';
 import { MetadataIndex } from '../db';
@@ -85,6 +85,35 @@ export function crossFileDiagnostics(
     }
   }
 
+  // --- setp on a read-only target (output pin or read-only parameter) ---
+  // halcmd rejects this at runtime. Only flag when the target resolves
+  // confidently to an `out` pin or `ro` param; unresolved/Mesa pins are skipped.
+  for (const f of model.files) {
+    for (const stmt of f.hal.statements) {
+      if (stmt.kind !== 'setp') continue;
+      const pin = (stmt as SetpStatement).pinToken;
+      if (!pin || pin.ini) continue;
+      const name = model.aliases.get(pin.text) ?? pin.text;
+      let problem: string | undefined;
+      const builtin = index.builtinPin(name);
+      if (builtin) {
+        if (builtin.pin.dir === 'out') problem = `Cannot 'setp' '${pin.text}': it is an output pin (read-only).`;
+      } else {
+        const r = resolveInstance(name, model.instances);
+        if (r) {
+          const p = index.pin(r.comp, r.suffix);
+          if (p) {
+            if (p.dir === 'out') problem = `Cannot 'setp' '${pin.text}': it is an output pin (read-only).`;
+          } else {
+            const pa = index.param(r.comp, r.suffix);
+            if (pa && pa.dir === 'ro') problem = `Cannot 'setp' '${pin.text}': it is a read-only (R) parameter.`;
+          }
+        }
+      }
+      if (problem) sinkFor(f.uri).add('hal.param.readonlyParamSet', f.lineIndex.rangeAt(pin.start, pin.end), problem);
+    }
+  }
+
   // --- Signal graph rules ---
   for (const [name, node] of model.signals) {
     const def = node.firstDef ?? node.occurrences[0];
@@ -166,11 +195,12 @@ function validateIniValue(type: string, value: string, doc?: string): ValueProbl
     case 'int':
     case 's32':
     case 's64':
-      // decimal or hex (LinuxCNC accepts 0x.. for integer keys)
-      return numeric(/^[+-]?(\d+|0x[0-9a-fA-F]+)$/, 'an integer');
+      // decimal, or hex/octal/binary (LinuxCNC strtol base-0 accepts 0x/0X,
+      // 0o/0O, 0b/0B for integer keys).
+      return numeric(/^[+-]?(\d+|0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+)$/, 'an integer');
     case 'u32':
     case 'u64':
-      return numeric(/^\+?(\d+|0x[0-9a-fA-F]+)$/, 'a non-negative integer');
+      return numeric(/^\+?(\d+|0[xX][0-9a-fA-F]+|0[oO][0-7]+|0[bB][01]+)$/, 'a non-negative integer');
     case 'bit':
       return /^[01]$/.test(v) ? undefined : { rule: 'ini.value.typeMismatch', message: `Expected 0 or 1 for this key, but got \`${v}\`.` };
     case 'bool':

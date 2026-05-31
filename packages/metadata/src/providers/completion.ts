@@ -9,6 +9,10 @@ import { MetadataIndex } from '../db';
 import { MachineModel } from '../model/types';
 import { ComponentDef, PinDef, ParamDef } from '../types';
 
+/** Cap instance expansion in completion (a few dozen is all a user can use; a
+ *  clamped-but-large count= must not produce tens of thousands of items). */
+const INSTANCE_CAP = 256;
+
 // ---------------------------------------------------------------------------
 // Context extraction
 // ---------------------------------------------------------------------------
@@ -518,8 +522,8 @@ function instances(ctx: HalCompletionContext): InstInfo[] {
     const s = stmt as LoadrtStatement;
     const comp = s.componentToken;
     if (!comp || comp.ini) continue;
-    if (s.names?.length) for (const n of s.names) reg(n, comp.text);
-    else if (typeof s.count === 'number') for (let i = 0; i < s.count; i++) reg(`${comp.text}.${i}`, comp.text);
+    if (s.names?.length) for (const n of s.names.slice(0, INSTANCE_CAP)) reg(n, comp.text);
+    else if (typeof s.count === 'number') for (let i = 0; i < Math.min(s.count, INSTANCE_CAP); i++) reg(`${comp.text}.${i}`, comp.text);
     else { reg(`${comp.text}.0`, comp.text); reg(comp.text, comp.text); }
   }
   return out;
@@ -548,7 +552,7 @@ export function completeIni(ctx: IniCompletionContext): CompletionItem[] {
     const inner = trimmed.slice(1).replace(/\].*$/, '');
     const range = lineIndex.rangeAt(start + leading + 1, offset);
     const names = new Set<string>();
-    for (const s of ini.sections) names.add(s.name.text);
+    for (const s of ini.sections) { const nm = s.name.text.trim(); if (nm) names.add(nm); }
     for (const name of Object.keys(index.raw().iniSections)) names.add(friendlySection(name));
     return [...names]
       .filter((n) => prefixMatch(n, inner))

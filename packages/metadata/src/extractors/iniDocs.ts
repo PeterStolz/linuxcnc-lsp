@@ -85,7 +85,7 @@ export function extractHoming(adoc: string): Record<string, string> {
 }
 
 function stripMacros(s: string): string {
-  return s.replace(/\(\(\([^)]*\)\)\)/g, '').trim();
+  return s.replace(/\(\(\((?:[^()]|\([^()]*\))*\)\)\)/g, '').trim();
 }
 
 /** Only treat a leading `(...)` as a type annotation when it is a recognized

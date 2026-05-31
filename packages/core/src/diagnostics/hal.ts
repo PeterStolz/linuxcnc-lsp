@@ -1,7 +1,7 @@
 import { Range } from 'vscode-languageserver-types';
 import { LineIndex } from '../common/lineIndex';
 import { HalFile, HalStatement } from '../hal/ast';
-import { HalToken } from '../hal/tokens';
+import { HalToken, HalTokenKind } from '../hal/tokens';
 import { DiagnosticSink, DiagnosticSinkOptions, SuppressionIndex, Diagnostic } from './types';
 
 /** Intra-file (no metadata, no cross-file) diagnostics for a HAL document. */
@@ -33,9 +33,19 @@ function checkStatement(stmt: HalStatement, lineIndex: LineIndex, sink: Diagnost
     sink.add('hal.syntax.malformedStatement', rangeOf(lineIndex, t, stmt), msg);
 
   switch (stmt.kind) {
-    case 'error':
-      sink.add('hal.syntax.unknownCommand', lineIndex.rangeAt(stmt.start, stmt.end), (s.message as string) ?? 'Syntax error');
+    case 'error': {
+      // A line whose first token is a WORD that is not a known command is a
+      // confident "unknown command" Error (e.g. `loart pid`). A line that does
+      // not start with a word (stray `(`, `"`, a number — typically a wrapped
+      // comment / paste artifact) is too ambiguous to hard-error, so it degrades
+      // to a Hint.
+      const tokens = (s.tokens as HalToken[]) ?? [];
+      const startsWithWord = tokens[0]?.kind === HalTokenKind.Word;
+      const range = lineIndex.rangeAt(stmt.start, stmt.end);
+      if (startsWithWord) sink.add('hal.syntax.unknownCommand', range, (s.message as string) ?? 'Syntax error');
+      else sink.add('hal.syntax.unrecognizedLine', range, (s.message as string) ?? 'Unrecognized line');
       return;
+    }
     case 'loadrt':
       if (!s.componentToken) malformed('loadrt requires a component name');
       break;

@@ -66,7 +66,9 @@ export class MetadataIndex {
     if (direct) return direct;
     // Match instanced sections: JOINT_0 -> JOINT_<num>, AXIS_X -> AXIS_<letter>, SPINDLE_0 -> SPINDLE_<num>
     if (/^JOINT_\d+$/i.test(name)) return this.db.iniSections['JOINT_<num>'];
-    if (/^AXIS_[A-W]$/i.test(name)) return this.db.iniSections['AXIS_<letter>'];
+    // Valid LinuxCNC axis letters are X Y Z A B C U V W — NOT a contiguous A..W
+    // range (that wrongly excludes X/Y/Z and includes D..T).
+    if (/^AXIS_[XYZABCUVW]$/i.test(name)) return this.db.iniSections['AXIS_<letter>'];
     if (/^SPINDLE_\d+$/i.test(name)) return this.db.iniSections['SPINDLE_<num>'];
     return undefined;
   }

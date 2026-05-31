@@ -86,6 +86,30 @@ export class Project {
       ? { uri: iniUri, lineIndex: new LineIndex(iniText), ini: parseIni(iniText) }
       : undefined;
 
+    // Resolve #INCLUDE-d INI files (relative to the including file's dir) so that
+    // [SECTION]KEY refs defined in an .inc resolve and don't false-positive.
+    const iniIncludes: IniFileInput[] = [];
+    if (iniInput) {
+      const seen = new Set<string>([iniUri]);
+      const collect = (baseUri: string, ini: ReturnType<typeof parseIni>): void => {
+        const baseDir = path.dirname(URI.parse(baseUri).fsPath);
+        for (const inc of ini.includes) {
+          const v = inc.file.text.trim();
+          if (!v) continue;
+          const abs = path.isAbsolute(v) ? v : path.join(baseDir, v);
+          const incUri = URI.file(abs).toString();
+          if (seen.has(incUri)) continue; // guard against #INCLUDE cycles
+          seen.add(incUri);
+          const text = this.readText(incUri);
+          if (text === undefined) continue;
+          const parsed = parseIni(text);
+          iniIncludes.push({ uri: incUri, lineIndex: new LineIndex(text), ini: parsed });
+          if (iniIncludes.length < 64) collect(incUri, parsed); // bounded
+        }
+      };
+      collect(iniUri, iniInput.ini);
+    }
+
     const files: HalFileInput[] = [];
     let hasOpaque = false;
     for (const r of resolved) {
@@ -97,7 +121,7 @@ export class Project {
       if (text === undefined) continue;
       files.push({ uri: r.uri, text, lineIndex: new LineIndex(text), hal: parseHal(text), phase: r.phase, order: r.order });
     }
-    return buildMachineModel({ iniInput, files, index, hasOpaqueFiles: hasOpaque });
+    return buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaqueFiles: hasOpaque });
   }
 
   private resolveHalfile(iniUri: string, value: string): { uri: string; opaque: boolean } | undefined {

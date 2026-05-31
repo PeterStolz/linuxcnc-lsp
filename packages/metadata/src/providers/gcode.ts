@@ -51,9 +51,11 @@ function numberedParamDoc(num: number): string {
   if (num >= 5210 && num <= 5219) return 'G92 offset (and enable flag at 5210)';
   if (num === 5220) return 'current coordinate system number (1 = G54 … 9 = G59.3)';
   if (num >= 5221 && num <= 5230) return 'G54 coordinate system offset';
-  if (num >= 5241 && num <= 5500) return 'G55–G59.3 coordinate system offsets';
+  // Specific tool/position ranges first; the coordinate-system block stops at
+  // 5390 (G59.3 is the last system) so it no longer shadows them.
   if (num >= 5400 && num <= 5409) return 'current tool / tool-change parameters';
   if (num >= 5420 && num <= 5428) return 'current commanded position (X Y Z A B C U V W) in the active system';
+  if (num >= 5241 && num <= 5390) return 'G55–G59.3 coordinate system offsets';
   return 'numbered parameter (volatile unless persisted via the [RS274NGC] var file)';
 }
 
@@ -82,9 +84,15 @@ export function hoverGcode(text: string, lineIndex: LineIndex, offset: number, i
       return null;
     }
     case GcodeTokenKind.Param: {
-      const inner = /^#+<?([^>]*)>?$/.exec(tok.text)?.[1] ?? '';
-      if (/^\d+$/.test(inner)) return md(`**parameter \`${tok.text}\`** — ${numberedParamDoc(parseInt(inner, 10))}`, r);
-      if (inner.startsWith('_')) return md(`**global named parameter \`${tok.text}\`** — visible across all subroutines`, r);
+      // Count leading '#' separately: ## (or ###) is an indirect reference, not
+      // a plain numbered parameter.
+      const hashes = (/^#+/.exec(tok.text)?.[0] ?? '').length;
+      const body = tok.text.replace(/^#+/, '').replace(/^<([^>]*)>?$/, '$1');
+      if (hashes > 1) {
+        return md(`**indirect parameter reference \`${tok.text}\`** — the value of \`#${body}\` is used as the parameter number to read`, r);
+      }
+      if (/^\d+$/.test(body)) return md(`**parameter \`${tok.text}\`** — ${numberedParamDoc(parseInt(body, 10))}`, r);
+      if (body.startsWith('_')) return md(`**global named parameter \`${tok.text}\`** — visible across all subroutines`, r);
       return md(`**named parameter \`${tok.text}\`** — local to the current subroutine scope`, r);
     }
     case GcodeTokenKind.Oword:
@@ -101,6 +109,13 @@ export function hoverGcode(text: string, lineIndex: LineIndex, offset: number, i
 // --- Completion -------------------------------------------------------------
 
 export function completeGcode(text: string, lineIndex: LineIndex, offset: number, index: MetadataIndex): CompletionItem[] {
+  // Token-aware guard: never complete G/M codes inside a comment or inside an
+  // expression identifier (a multi-letter run within [ ]).
+  const tok = gcodeTokenAt(tokenizeGcode(text), offset);
+  if (tok && (tok.kind === GcodeTokenKind.Comment ||
+      (tok.kind === GcodeTokenKind.Unknown && tok.text.length > 1 && /[A-Za-z]/.test(tok.text)))) {
+    return [];
+  }
   let ls = offset;
   while (ls > 0 && text[ls - 1] !== '\n') ls--;
   const prefix = text.slice(ls, offset);

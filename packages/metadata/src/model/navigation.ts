@@ -2,6 +2,7 @@ import { Location, DocumentHighlight, DocumentHighlightKind } from 'vscode-langu
 import {
   HalFile, HalToken, collectIniRefs, findSection, findEntries,
   LoadrtStatement, NetStatement, SetpStatement, SetsStatement, LinkStatement, NewsigStatement,
+  UnlinkpStatement, AliasStatement,
 } from '@linuxcnc/core';
 import { MachineModel, HalFileInput } from './types';
 
@@ -32,7 +33,35 @@ export function locateHal(hal: HalFile, offset: number): Located {
       case 'net': {
         const s = stmt as NetStatement;
         if (inTok(s.signalToken, offset)) return { kind: 'signal', name: s.signalToken.text, token: s.signalToken };
-        for (const l of s.links) if (inTok(l.pinToken, offset)) return l.pinToken.ini ? iniLoc(l.pinToken) : { kind: 'pin', name: l.pinToken.text, token: l.pinToken };
+        // A pin may embed an INI substitution (hm2_[HOSTMOT2](BOARD).0.gpio.in)
+        // which the tokenizer splits into contiguous link tokens. Merge them so
+        // a fragment isn't mistaken for a whole pin (which conflates distinct
+        // pins sharing the trailing fragment in find-references).
+        for (const atom of mergeLinkAtoms(s.links)) {
+          for (const t of atom.tokens) {
+            if (!inTok(t, offset)) continue;
+            if (t.ini) return iniLoc(t);
+            return { kind: 'pin', name: atom.tokens.length === 1 ? t.text : atom.text, token: t };
+          }
+        }
+        break;
+      }
+      case 'linkpp': {
+        const s = stmt as LinkStatement;
+        if (inTok(s.firstToken, offset)) return { kind: 'pin', name: s.firstToken!.text, token: s.firstToken! };
+        if (inTok(s.secondToken, offset)) return { kind: 'pin', name: s.secondToken!.text, token: s.secondToken! };
+        break;
+      }
+      case 'unlinkp': {
+        const s = stmt as UnlinkpStatement;
+        if (inTok(s.pinToken, offset)) return { kind: 'pin', name: s.pinToken!.text, token: s.pinToken! };
+        break;
+      }
+      case 'alias':
+      case 'unalias': {
+        const s = stmt as AliasStatement;
+        if (inTok(s.originalToken, offset)) return { kind: 'pin', name: s.originalToken!.text, token: s.originalToken! };
+        if (inTok(s.aliasToken, offset)) return { kind: 'pin', name: s.aliasToken!.text, token: s.aliasToken! };
         break;
       }
       case 'newsig': {
@@ -73,6 +102,27 @@ export function locateHal(hal: HalFile, offset: number): Located {
 
 function iniLoc(t: HalToken): Located {
   return { kind: 'iniref', section: t.ini!.section, key: t.ini!.key, token: t };
+}
+
+/** Group contiguous (no-whitespace-between) net link tokens into one pin atom,
+ *  mirroring build.ts mergePinAtoms, so an embedded INI substitution does not
+ *  split a single pin into separate fragments. */
+function mergeLinkAtoms(links: NetStatement['links']): Array<{ tokens: HalToken[]; text: string }> {
+  const atoms: Array<{ tokens: HalToken[]; text: string }> = [];
+  let cur: { tokens: HalToken[]; text: string; lastEnd: number } | undefined;
+  for (const l of links) {
+    const t = l.pinToken;
+    if (cur && t.start === cur.lastEnd) {
+      cur.tokens.push(t);
+      cur.text += t.text;
+      cur.lastEnd = t.end;
+    } else {
+      if (cur) atoms.push({ tokens: cur.tokens, text: cur.text });
+      cur = { tokens: [t], text: t.text, lastEnd: t.end };
+    }
+  }
+  if (cur) atoms.push({ tokens: cur.tokens, text: cur.text });
+  return atoms;
 }
 
 /** Go-to-definition for the symbol at `offset` in file `uri`. */

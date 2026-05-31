@@ -20457,42 +20457,42 @@
   "G17": {
    "code": "G17",
    "title": "Plane Select",
-   "docMd": "These codes set the current plane as follows:"
+   "docMd": "'G17' - XY (default)"
   },
   "G19.1": {
    "code": "G19.1",
    "title": "Plane Select",
-   "docMd": "These codes set the current plane as follows:"
+   "docMd": "'G19.1' - VW"
   },
   "G20": {
    "code": "G20",
    "title": "Set Units of Measure",
-   "docMd": "It is a good idea to include units in the preamble of each G-code file."
+   "docMd": "'G20' - to use inches for length units."
   },
   "G21": {
    "code": "G21",
    "title": "Set Units of Measure",
-   "docMd": "It is a good idea to include units in the preamble of each G-code file."
+   "docMd": "'G21' - to use millimeters for length units."
   },
   "G28": {
    "code": "G28",
    "title": "Go to Predefined Position",
-   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\nOnly use G28 when your machine is homed to a repeatable position and the desired G28 position has been stored with G28.1."
+   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\n'G28' - makes a rapid move from the current position to the 'absolute' position of the values in parameters 5161-5166."
   },
   "G28.1": {
    "code": "G28.1",
    "title": "Go to Predefined Position",
-   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\nOnly use G28 when your machine is homed to a repeatable position and the desired G28 position has been stored with G28.1."
+   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\n'G28.1' - stores the current 'absolute' position into parameters 5161-5166."
   },
   "G30": {
    "code": "G30",
    "title": "Go to Predefined Position",
-   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\nOnly use G30 when your machine is homed to a repeatable position and the desired G30 position has been stored with G30.1."
+   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\n'G30' - makes a rapid move from the current position to the 'absolute' position of the values in parameters 5181-5189."
   },
   "G30.1": {
    "code": "G30.1",
    "title": "Go to Predefined Position",
-   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\nOnly use G30 when your machine is homed to a repeatable position and the desired G30 position has been stored with G30.1."
+   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\n'G30.1' - stores the current absolute position into parameters 5181-5186."
   },
   "G33": {
    "code": "G33",
@@ -20507,12 +20507,12 @@
   "G38.2": {
    "code": "G38.2",
    "title": "Probing",
-   "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
+   "docMd": "```ngc\nG38.n axes\n```\n\n'G38.2' - probe toward workpiece, stop on contact, signal error if failure"
   },
   "G38.5": {
    "code": "G38.5",
    "title": "Probing",
-   "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
+   "docMd": "```ngc\nG38.n axes\n```\n\n'G38.5' - probe away from workpiece, stop on loss of contact"
   },
   "G40": {
    "code": "G40",
@@ -20569,6 +20569,51 @@
    "title": "Move in Machine Coordinates",
    "docMd": "```ngc\nG53 axes\n```\n\nTo move in the machine coordinate system, program 'G53' on the same line as a linear move. 'G53' is not modal and must be programmed on each line. 'G0' or 'G1' does not have to be programmed on the same line if one is currently active."
   },
+  "G54": {
+   "code": "G54",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G54'   - select coordinate system 1"
+  },
+  "G55": {
+   "code": "G55",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G55'   - select coordinate system 2"
+  },
+  "G56": {
+   "code": "G56",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G56'   - select coordinate system 3"
+  },
+  "G57": {
+   "code": "G57",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G57'   - select coordinate system 4"
+  },
+  "G58": {
+   "code": "G58",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G58'   - select coordinate system 5"
+  },
+  "G59": {
+   "code": "G59",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G59'   - select coordinate system 6"
+  },
+  "G59.1": {
+   "code": "G59.1",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G59.1' - select coordinate system 7"
+  },
+  "G59.2": {
+   "code": "G59.2",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G59.2' - select coordinate system 8"
+  },
+  "G59.3": {
+   "code": "G59.3",
+   "title": "Select Coordinate System (1 - 9)",
+   "docMd": "'G59.3' - select coordinate system 9"
+  },
   "G61": {
    "code": "G61",
    "title": "Exact Path Mode",
@@ -20588,6 +20633,16 @@
    "code": "G70",
    "title": "Lathe finishing cycle",
    "docMd": "```ngc\nG70 Q- <X-> <Z-> <D-> <E-> <P->\n```\n\nThe 'G70' cycle is intended to be used after the shape of the profile given in the subroutine with number Q has been cut with G71 or G72."
+  },
+  "G71": {
+   "code": "G71",
+   "title": "Lathe roughing cycle",
+   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
+  },
+  "G72": {
+   "code": "G72",
+   "title": "Lathe roughing cycle",
+   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
   },
   "G73": {
    "code": "G73",
@@ -20657,22 +20712,22 @@
   "G90": {
    "code": "G90",
    "title": "Distance Mode",
-   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n(X, Y, Z, A, B, C, U, V, W) usually represent positions in terms of the currently active coordinate system. Any exceptions to that rule are described explicitly in the G80 G89 section."
+   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n'G90' - absolute distance mode In absolute distance mode, axis numbers (X, Y, Z, A, B, C, U, V, W) usually represent positions in terms of the currently active coordinate system. Any exceptions to that rule are described explicitly in the G80 G89 section."
   },
   "G91": {
    "code": "G91",
    "title": "Distance Mode",
-   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n(X, Y, Z, A, B, C, U, V, W) usually represent positions in terms of the currently active coordinate system. Any exceptions to that rule are described explicitly in the G80 G89 section."
+   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n'G91' - incremental distance mode In incremental distance mode, axis numbers usually represent increments from the current coordinate."
   },
   "G90.1": {
    "code": "G90.1",
    "title": "Arc Distance Mode",
-   "docMd": "When G90.1 is in effect I and J both must be specified with G2/3 for the XY plane or J and K for the XZ plane or it is an error."
+   "docMd": "'G90.1' - absolute distance mode for I, J & K offsets. When G90.1 is in effect I and J both must be specified with G2/3 for the XY plane or J and K for the XZ plane or it is an error."
   },
   "G91.1": {
    "code": "G91.1",
    "title": "Arc Distance Mode",
-   "docMd": "When G90.1 is in effect I and J both must be specified with G2/3 for the XY plane or J and K for the XZ plane or it is an error."
+   "docMd": "'G91.1' - incremental distance mode for I, J & K offsets. `G91.1` Returns I, J & K to their default behavior."
   },
   "G92": {
    "code": "G92",
@@ -20682,12 +20737,12 @@
   "G92.1": {
    "code": "G92.1",
    "title": "Cancel G92 Offsets",
-   "docMd": "G92.1 only clears G92 offsets, to change G53-G59.3 coordinate system offsets in G-code use either G10 L2 or G10 L20."
+   "docMd": "'G92.1' - turn off G92 offsets and reset parameters 5211 - 5219 to zero."
   },
   "G92.2": {
    "code": "G92.2",
    "title": "Cancel G92 Offsets",
-   "docMd": "G92.1 only clears G92 offsets, to change G53-G59.3 coordinate system offsets in G-code use either G10 L2 or G10 L20."
+   "docMd": "'G92.2' - turn off G92 offsets but keep parameters 5211 - 5219 available."
   },
   "G92.3": {
    "code": "G92.3",
@@ -20697,82 +20752,62 @@
   "G93": {
    "code": "G93",
    "title": "Feed Modes",
-   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+   "docMd": "'G93' - is Inverse Time Mode. In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
   },
   "G94": {
    "code": "G94",
    "title": "Feed Modes",
-   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+   "docMd": "'G94' - is Units per Minute Mode. In units per minute feed mode, an F word is interpreted to mean the controlled point should move at a certain number of inches per minute, millimeters per minute, or degrees per minute, depending upon what length units are being used and which axis or axes are moving."
   },
   "G95": {
    "code": "G95",
    "title": "Feed Modes",
-   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+   "docMd": "'G95' - is Units per Revolution Mode. In units per revolution mode, an F-word is interpreted to mean the controlled point should move a certain number of inches per revolution of the spindle, depending on what length units are being used and which axis or axes are moving. `G95` is not suitable for threading, for threading use `G33` or `G76`. `G95` requires that `spindle.N.speed-in` to be connected. The actual spindle to which the feed is synchronised is chosen by the `$` parameter."
   },
   "G96": {
    "code": "G96",
    "title": "Spindle Control Mode, Constant Surface vs Rotation Speed (IPM or m/min vs RPM)",
-   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\nWhen using G96, ensure that X0 in the current coordinate system (including offsets and tool lengths) is the center of rotation or LinuxCNC will not give the desired surface speed. G96 is not affected by radius or diameter mode."
+   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\n'G96 S- <D->' - selects constant surface speed of 'S':"
   },
   "G97": {
    "code": "G97",
    "title": "Spindle Control Mode, Constant Surface vs Rotation Speed (IPM or m/min vs RPM)",
-   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\nWhen using G96, ensure that X0 in the current coordinate system (including offsets and tool lengths) is the center of rotation or LinuxCNC will not give the desired surface speed. G96 is not affected by radius or diameter mode."
+   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\n'G97' selects RPM mode."
   },
   "G98": {
    "code": "G98",
    "title": "Canned Cycle Z Retract Mode",
-   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\nWhen spindle retracts during canned cycles, there are two options to choose from for the way it does it:"
+   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\n'G98' - retract to the position that axis was in just before this series of one or more contiguous canned cycles was started."
   },
   "G99": {
    "code": "G99",
    "title": "Canned Cycle Z Retract Mode",
-   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\nWhen spindle retracts during canned cycles, there are two options to choose from for the way it does it:"
+   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\n'G99' - retract to the position specified by the R word of the canned cycle."
   },
   "G38": {
    "code": "G38",
    "title": "._n_ Straight Probe",
    "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
   },
-  "G54": {
-   "code": "G54",
-   "title": "-G59.3 Select Coordinate System",
-   "docMd": "The coordinate systems store the axis values and the XY rotation angle around the Z axis in the parameters shown in the following table."
-  },
-  "G59.3": {
-   "code": "G59.3",
-   "title": "-G59.3 Select Coordinate System",
-   "docMd": "The coordinate systems store the axis values and the XY rotation angle around the Z axis in the parameters shown in the following table."
-  },
-  "G71": {
-   "code": "G71",
-   "title": "Lathe roughing cycles",
-   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
-  },
-  "G72": {
-   "code": "G72",
-   "title": "Lathe roughing cycles",
-   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
-  },
   "M0": {
    "code": "M0",
    "title": "Program Pause",
-   "docMd": ""
+   "docMd": "'M0' - pause a running program temporarily. LinuxCNC remains in the Auto Mode so MDI and other manual actions are not enabled. Pressing the resume button will restart the program at the following line."
   },
   "M1": {
    "code": "M1",
    "title": "Program Pause",
-   "docMd": ""
+   "docMd": "'M1' - pause a running program temporarily if the optional stop switch is on. LinuxCNC remains in the Auto Mode so MDI and other manual actions are not enabled. Pressing the resume button will restart the program at the following line."
   },
   "M2": {
    "code": "M2",
    "title": "Program End",
-   "docMd": ""
+   "docMd": "'M2' - end the program. Pressing `Cycle Start` (\"R\" in the Axis GUI) will restart the program at the beginning of the file."
   },
   "M30": {
    "code": "M30",
    "title": "Program End",
-   "docMd": ""
+   "docMd": "'M30' - exchange pallet shuttles and end the program. Pressing `Cycle Start` will start the program at the beginning of the file."
   },
   "M60": {
    "code": "M60",
@@ -20782,17 +20817,17 @@
   "M3": {
    "code": "M3",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M3 [$n]' - start the selected spindle clockwise at the 'S' speed."
   },
   "M4": {
    "code": "M4",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M4 [$n]' - start the selected spindle counterclockwise at the 'S' speed."
   },
   "M5": {
    "code": "M5",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M5 [$n]' - stop the selected spindle."
   },
   "M6": {
    "code": "M6",
@@ -20802,17 +20837,17 @@
   "M7": {
    "code": "M7",
    "title": "Coolant Control",
-   "docMd": ""
+   "docMd": "'M7' - turn mist coolant on. M7 controls iocontrol.0.coolant-mist pin."
   },
   "M8": {
    "code": "M8",
    "title": "Coolant Control",
-   "docMd": ""
+   "docMd": "'M8' - turn flood coolant on. M8 controls iocontrol.0.coolant-flood pin."
   },
   "M9": {
    "code": "M9",
    "title": "Coolant Control",
-   "docMd": ""
+   "docMd": "'M9' - turn both M7 and M8 off."
   },
   "M19": {
    "code": "M19",
@@ -20822,12 +20857,12 @@
   "M48": {
    "code": "M48",
    "title": "Feed & Spindle Overrides Enable/Disable",
-   "docMd": ""
+   "docMd": "'M48' - enable the spindle speed and feed rate override controls."
   },
   "M49": {
    "code": "M49",
    "title": "Feed & Spindle Overrides Enable/Disable",
-   "docMd": ""
+   "docMd": "'M49' - disable both controls."
   },
   "M50": {
    "code": "M50",
@@ -20853,6 +20888,26 @@
    "code": "M61",
    "title": "Set Current Tool Number",
    "docMd": ""
+  },
+  "M62": {
+   "code": "M62",
+   "title": "Output Control",
+   "docMd": "'M62 P-' - turn on digital output synchronized with motion."
+  },
+  "M63": {
+   "code": "M63",
+   "title": "Output Control",
+   "docMd": "'M63 P-' - turn off digital output synchronized with motion."
+  },
+  "M64": {
+   "code": "M64",
+   "title": "Output Control",
+   "docMd": "'M64 P-' - turn on digital output immediately."
+  },
+  "M65": {
+   "code": "M65",
+   "title": "Output Control",
+   "docMd": "'M65 P-' - turn off digital output immediately."
   },
   "M66": {
    "code": "M66",
@@ -20899,24 +20954,504 @@
    "title": "Call and Return From Subprogram",
    "docMd": "```ngc\nO<measure> sub   (measure reference tool)\n;\n#<absolute> = #<_absolute>  (remember in local variable if G90 was set)\n;\ng30 (above switch)\ng38.2 z0 f15 (measure)\ng91 g0z.2 (off the switch)\n#1000=#5063 (save reference tool length)\n(print,reference length is #1000)\n;\nO<restore_abs> if [#<absolute>]\n    g90 (restore G90 only if it was set on entry:)\nO<restore_abs> endif\n;\nO<measure> endsub\n```\n\nThe interpreter supports Fanuc-style main- and sub-programs with the 'M98' and 'M99' M-codes. See Fanuc-Style Programs."
   },
-  "M62": {
-   "code": "M62",
-   "title": "- M65 Digital Output Control",
-   "docMd": ""
-  },
-  "M65": {
-   "code": "M65",
-   "title": "- M65 Digital Output Control",
-   "docMd": ""
-  },
   "M100": {
    "code": "M100",
-   "title": "-M199 User Defined Commands",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M101": {
+   "code": "M101",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M102": {
+   "code": "M102",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M103": {
+   "code": "M103",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M104": {
+   "code": "M104",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M105": {
+   "code": "M105",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M106": {
+   "code": "M106",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M107": {
+   "code": "M107",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M108": {
+   "code": "M108",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M109": {
+   "code": "M109",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M110": {
+   "code": "M110",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M111": {
+   "code": "M111",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M112": {
+   "code": "M112",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M113": {
+   "code": "M113",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M114": {
+   "code": "M114",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M115": {
+   "code": "M115",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M116": {
+   "code": "M116",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M117": {
+   "code": "M117",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M118": {
+   "code": "M118",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M119": {
+   "code": "M119",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M120": {
+   "code": "M120",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M121": {
+   "code": "M121",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M122": {
+   "code": "M122",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M123": {
+   "code": "M123",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M124": {
+   "code": "M124",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M125": {
+   "code": "M125",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M126": {
+   "code": "M126",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M127": {
+   "code": "M127",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M128": {
+   "code": "M128",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M129": {
+   "code": "M129",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M130": {
+   "code": "M130",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M131": {
+   "code": "M131",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M132": {
+   "code": "M132",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M133": {
+   "code": "M133",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M134": {
+   "code": "M134",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M135": {
+   "code": "M135",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M136": {
+   "code": "M136",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M137": {
+   "code": "M137",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M138": {
+   "code": "M138",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M139": {
+   "code": "M139",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M140": {
+   "code": "M140",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M141": {
+   "code": "M141",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M142": {
+   "code": "M142",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M143": {
+   "code": "M143",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M144": {
+   "code": "M144",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M145": {
+   "code": "M145",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M146": {
+   "code": "M146",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M147": {
+   "code": "M147",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M148": {
+   "code": "M148",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M149": {
+   "code": "M149",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M150": {
+   "code": "M150",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M151": {
+   "code": "M151",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M152": {
+   "code": "M152",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M153": {
+   "code": "M153",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M154": {
+   "code": "M154",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M155": {
+   "code": "M155",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M156": {
+   "code": "M156",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M157": {
+   "code": "M157",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M158": {
+   "code": "M158",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M159": {
+   "code": "M159",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M160": {
+   "code": "M160",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M161": {
+   "code": "M161",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M162": {
+   "code": "M162",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M163": {
+   "code": "M163",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M164": {
+   "code": "M164",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M165": {
+   "code": "M165",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M166": {
+   "code": "M166",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M167": {
+   "code": "M167",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M168": {
+   "code": "M168",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M169": {
+   "code": "M169",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M170": {
+   "code": "M170",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M171": {
+   "code": "M171",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M172": {
+   "code": "M172",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M173": {
+   "code": "M173",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M174": {
+   "code": "M174",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M175": {
+   "code": "M175",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M176": {
+   "code": "M176",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M177": {
+   "code": "M177",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M178": {
+   "code": "M178",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M179": {
+   "code": "M179",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M180": {
+   "code": "M180",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M181": {
+   "code": "M181",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M182": {
+   "code": "M182",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M183": {
+   "code": "M183",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M184": {
+   "code": "M184",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M185": {
+   "code": "M185",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M186": {
+   "code": "M186",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M187": {
+   "code": "M187",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M188": {
+   "code": "M188",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M189": {
+   "code": "M189",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M190": {
+   "code": "M190",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M191": {
+   "code": "M191",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M192": {
+   "code": "M192",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M193": {
+   "code": "M193",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M194": {
+   "code": "M194",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M195": {
+   "code": "M195",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M196": {
+   "code": "M196",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M197": {
+   "code": "M197",
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M198": {
+   "code": "M198",
+   "title": "User Defined M-Codes",
    "docMd": "```ngc\nM1-- <P- Q->\n```"
   },
   "M199": {
    "code": "M199",
-   "title": "-M199 User Defined Commands",
+   "title": "User Defined M-Codes",
    "docMd": "```ngc\nM1-- <P- Q->\n```"
   },
   "F": {

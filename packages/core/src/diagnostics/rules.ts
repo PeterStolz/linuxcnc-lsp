@@ -16,7 +16,8 @@ const H = DiagnosticSeverity.Hint;
 
 export const RULES: readonly RuleDef[] = [
   // --- HAL syntax (intra-file) ---
-  { id: 'hal.syntax.unknownCommand', defaultSeverity: E, description: 'Statement does not start with a known halcmd command.' },
+  { id: 'hal.syntax.unknownCommand', defaultSeverity: E, description: 'A word at the start of a line is not a known halcmd command.' },
+  { id: 'hal.syntax.unrecognizedLine', defaultSeverity: H, description: 'A line could not be parsed and does not start with a word (e.g. a wrapped comment fragment); too ambiguous to flag as an error.' },
   { id: 'hal.syntax.malformedStatement', defaultSeverity: E, description: 'A command is missing required arguments.' },
   // --- INI syntax (intra-file) ---
   { id: 'ini.syntax.entryOutsideSection', defaultSeverity: E, description: 'A KEY = VALUE entry appears before any [SECTION].' },

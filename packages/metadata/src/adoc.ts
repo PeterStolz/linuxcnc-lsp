@@ -6,12 +6,13 @@ export function adocToMarkdown(adoc: string): string {
   const lines = adoc.replace(/\r/g, '').split('\n');
   const out: string[] = [];
   let inAdmonition: string | null = null;
+  let admFence = false;
 
   for (const raw of lines) {
     let line = raw;
 
-    // Index macros (((...))) -> removed
-    line = line.replace(/\(\(\([^)]*\)\)\)/g, '');
+    // Index macros (((...))) -> removed (one level of inner parens tolerated).
+    line = line.replace(/\(\(\((?:[^()]|\([^()]*\))*\)\)\)/g, '');
 
     // Admonition block: [NOTE] / [WARNING] etc. followed by ==== fences
     const adm = /^\[(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/.exec(line.trim());
@@ -19,7 +20,13 @@ export function adocToMarkdown(adoc: string): string {
       inAdmonition = adm[1];
       continue;
     }
-    if (/^====+\s*$/.test(line.trim())) continue; // admonition fence
+    if (/^====+\s*$/.test(line.trim())) {
+      // First fence after [NOTE] opens the block; the matching fence closes it.
+      if (inAdmonition) {
+        if (admFence) { inAdmonition = null; admFence = false; } else admFence = true;
+      }
+      continue;
+    }
 
     // Headings: =, ==, === ... -> #, ##, ###
     const h = /^(=+)\s+(.*)$/.exec(line);
@@ -44,7 +51,8 @@ export function adocToMarkdown(adoc: string): string {
     if (/^\|===/.test(line)) continue; // table fence
 
     const prefix = inAdmonition && line.trim() ? '> ' : '';
-    if (inAdmonition && !line.trim()) inAdmonition = null;
+    // A blank line ends a non-fenced (single-paragraph) admonition.
+    if (inAdmonition && !admFence && !line.trim()) inAdmonition = null;
     out.push(prefix + inline(line));
   }
 

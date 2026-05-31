@@ -49,10 +49,14 @@ export function tokenizeHal(text: string): HalLogicalLine[] {
         break;
       }
       if (ch === '\r') {
+        // CRLF or a bare CR both end the physical line.
         i++;
-        continue;
+        if (text[i] === '\n') i++;
+        inLine = false;
+        break;
       }
-      if (ch === ' ' || ch === '\t') {
+      if (ch === ' ' || ch === '\t' || ch === '﻿') {
+        // Skip spaces, tabs, and a stray BOM/zero-width-no-break-space.
         i++;
         continue;
       }

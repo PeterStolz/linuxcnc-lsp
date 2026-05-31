@@ -2,7 +2,7 @@ import { tokenizeHal } from './tokenizer';
 import { HalToken, HalTokenKind, HalLogicalLine } from './tokens';
 import {
   HalFile, HalStatement, HAL_COMMAND_SET, BaseStatement,
-  LoadrtStatement, ModParam, NetStatement, NetLink,
+  LoadrtStatement, ModParam, NetStatement, NetLink, MAX_INSTANCE_COUNT,
 } from './ast';
 
 /** Parse a HAL document into an AST. Never throws; malformed lines become
@@ -149,7 +149,9 @@ function parseLoadrt(
       } else if (lname === 'count' && valueToken) {
         countToken = valueToken;
         const n = parseInt(valueToken.text, 10);
-        if (!Number.isNaN(n)) count = n;
+        // Clamp to a sane bound: an absurd count (typo) must never drive an
+        // unbounded allocation downstream (model build / symbols / completion).
+        if (Number.isInteger(n) && n >= 0) count = Math.min(n, MAX_INSTANCE_COUNT);
       } else if (lname === 'config' && valueToken) {
         configToken = valueToken;
       }

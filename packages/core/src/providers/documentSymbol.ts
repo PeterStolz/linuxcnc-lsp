@@ -33,14 +33,20 @@ export function halDocumentSymbols(file: HalFile, lineIndex: LineIndex): Documen
       case 'loadrt': {
         const s = stmt as LoadrtStatement;
         if (!s.componentToken) break;
-        const instances = s.names ?? (s.count ? Array.from({ length: s.count }, (_, i) => `${s.componentToken!.text}.${i}`) : []);
+        // Cap materialized children: count= is clamped at parse time, but never
+        // build more than a handful of outline nodes regardless.
+        const SYMBOL_CAP = 256;
+        const total = s.names ? s.names.length : (s.count ?? 0);
+        const instances = s.names
+          ? s.names.slice(0, SYMBOL_CAP)
+          : (s.count ? Array.from({ length: Math.min(s.count, SYMBOL_CAP) }, (_, i) => `${s.componentToken!.text}.${i}`) : []);
         const children = instances.map((inst) =>
           sym(inst, 'instance', SymbolKind.Object, stmtRange, lineIndex.rangeAt(s.componentToken!.start, s.componentToken!.end)),
         );
         out.push(
           sym(
             s.componentToken.text,
-            instances.length ? `${instances.length} instance(s)` : 'component',
+            total ? `${total} instance(s)` : 'component',
             SymbolKind.Module,
             stmtRange,
             lineIndex.rangeAt(s.componentToken.start, s.componentToken.end),

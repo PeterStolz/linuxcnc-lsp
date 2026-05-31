@@ -38,14 +38,14 @@ function record(file: string, code: string, sev: number | undefined, msg: string
   }
 }
 
-function walk(dir: string, out: string[]): void {
+function walk(dir: string, out: string[], ext: string): void {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith('.')) continue;
     // attic/ holds deprecated configs that reference removed components.
     if (e.isDirectory() && e.name === 'attic') continue;
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) walk(p, out);
-    else if (e.name.endsWith('.ini')) out.push(p);
+    if (e.isDirectory()) walk(p, out, ext);
+    else if (e.name.endsWith(ext)) out.push(p);
   }
 }
 
@@ -65,9 +65,10 @@ function resolveIncludes(iniPath: string, iniText: string, depth = 0): { uri: st
 }
 
 const iniFiles: string[] = [];
-walk(root, iniFiles);
+walk(root, iniFiles, '.ini');
 
 let machines = 0;
+const processedHal = new Set<string>();
 const readText = (p: string): string | undefined => {
   try {
     return fs.readFileSync(p, 'utf8');
@@ -118,6 +119,7 @@ for (const iniPath of iniFiles) {
 
   // HAL intra-file diagnostics for each member file.
   for (const f of files) {
+    processedHal.add(URI.parse(f.uri).fsPath);
     try {
       for (const d of diagnoseHalIntraFile(f.text, f.hal, f.lineIndex)) {
         record(URI.parse(f.uri).fsPath, String(d.code), d.severity, d.message, d.range.start.line);
@@ -145,7 +147,26 @@ for (const iniPath of iniFiles) {
   }
 }
 
-console.log(`\nScanned ${iniFiles.length} INI files; built ${machines} machine models under ${root}`);
+// Intra-file scan of EVERY .hal in the tree — including orphan files not
+// referenced by any INI's [HAL] section (which the per-machine loop skips).
+const halFilesAll: string[] = [];
+walk(root, halFilesAll, '.hal');
+let orphanHal = 0;
+for (const p of halFilesAll) {
+  if (processedHal.has(p)) continue;
+  orphanHal++;
+  const text = readText(p);
+  if (text === undefined) continue;
+  try {
+    const li = new LineIndex(text);
+    for (const d of diagnoseHalIntraFile(text, parseHal(text), li)) record(p, String(d.code), d.severity, d.message, d.range.start.line);
+  } catch (e) {
+    crashes++;
+    console.error(`CRASH hal ${p}: ${(e as Error).message}`);
+  }
+}
+
+console.log(`\nScanned ${iniFiles.length} INI files; built ${machines} machine models; intra-scanned ${orphanHal} orphan .hal files under ${root}`);
 console.log(`Crashes: ${crashes}`);
 console.log(`\nError/Warning diagnostics by rule (gate must be empty for known-good configs):`);
 const sorted = [...byRule.entries()].sort((a, b) => b[1] - a[1]);

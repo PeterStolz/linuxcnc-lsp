@@ -1,5 +1,10 @@
 import { HalToken } from './tokens';
 
+/** Upper bound on `loadrt count=` instance expansion. Real HAL components have
+ *  at most a handful of instances; an absurd count (typo) must never drive an
+ *  unbounded allocation in the model/providers. */
+export const MAX_INSTANCE_COUNT = 1024;
+
 /** The set of halcmd commands recognized by the parser (lowercased). */
 export const HAL_COMMANDS = [
   'loadrt', 'unloadrt', 'loadusr', 'unloadusr', 'unload', 'waitusr',
@@ -149,11 +154,17 @@ export interface HalFile {
   statements: HalStatement[];
 }
 
-/** Collect every IniRef token referenced anywhere in a statement. */
+/** Collect every IniRef token referenced anywhere in a statement. Tokens are
+ *  deduped by identity: a loadrt config=/count=/names= value is stored both in
+ *  `modparams[].valueToken` and in a top-level field, but is one token. */
 export function collectIniRefs(stmt: HalStatement): HalToken[] {
   const out: HalToken[] = [];
+  const seen = new Set<HalToken>();
   const visit = (t?: HalToken): void => {
-    if (t && t.ini) out.push(t);
+    if (t && t.ini && !seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
   };
   const s = stmt as unknown as Record<string, unknown>;
   for (const key of Object.keys(s)) {

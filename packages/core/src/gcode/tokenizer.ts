@@ -133,7 +133,9 @@ export function tokenizeGcode(text: string): GcodeToken[] {
       i = scanNumber(text, i);
       const value = text.slice(vStart, i);
       const tok: GcodeToken = { kind: GcodeTokenKind.Word, start, end: i, text: text.slice(start, i), letter, value };
-      if (value && CODE_LETTERS.has(letter)) tok.code = letter + normalizeNum(value);
+      // A G/M code number is a plain integer or decimal (G1, G38.2) — never an
+      // exponent form (G1e9 must NOT normalize to G1).
+      if (value && CODE_LETTERS.has(letter) && /^\d+(?:\.\d+)?$/.test(value)) tok.code = letter + normalizeNum(value);
       else if (LETTER_WORDS.has(letter)) tok.code = letter;
       out.push(tok);
       continue;

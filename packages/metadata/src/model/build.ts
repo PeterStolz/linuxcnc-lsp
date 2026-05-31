@@ -203,15 +203,21 @@ export function resolveInstance(
   fullName: string,
   instances: Map<string, InstanceInfo>,
 ): { comp: string; suffix: string } | undefined {
-  let best: string | undefined;
-  for (const name of instances.keys()) {
-    if (fullName === name || fullName.startsWith(name + '.')) {
-      if (!best || name.length > best.length) best = name;
-    }
+  // The only instance keys that can be a prefix of `fullName` are `fullName`
+  // itself and each of its dot-delimited prefixes. Probe them longest-first via
+  // O(1) Map lookups instead of scanning every registered instance — keeps
+  // buildMachineModel near-linear on large configs.
+  if (instances.has(fullName)) {
+    return { comp: instances.get(fullName)!.comp, suffix: '' };
   }
-  if (!best) return undefined;
-  const info = instances.get(best)!;
-  return { comp: info.comp, suffix: fullName === best ? '' : fullName.slice(best.length + 1) };
+  let dot = fullName.lastIndexOf('.');
+  while (dot > 0) {
+    const prefix = fullName.slice(0, dot);
+    const info = instances.get(prefix);
+    if (info) return { comp: info.comp, suffix: fullName.slice(dot + 1) };
+    dot = fullName.lastIndexOf('.', dot - 1);
+  }
+  return undefined;
 }
 
 export function resolvePinDir(

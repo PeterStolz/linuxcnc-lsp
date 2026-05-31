@@ -25,14 +25,26 @@ export function extractGcode(gcodeAdoc: string, mcodeAdoc: string, otherAdoc: st
     const sections = parseAnchoredSections(adoc);
     for (const [anchor, ref] of refs) {
       const sec = sections.get(anchor);
-      const docMd = sec ? buildDoc(sec.body) : undefined;
-      for (const code of ref.codes) put(code, { title: ref.title, docMd });
+      const sharedDoc = sec ? buildDoc(sec.body) : undefined;
+      for (const code of ref.codes) {
+        // A section documenting several codes via a `* 'G94' - ...` bullet list
+        // must give each code ITS bullet, not the whole (first code's) body.
+        let docMd = sharedDoc;
+        if (sec && ref.codes.length > 1) {
+          const bullet = perCodeBullet(code, sec.body);
+          if (bullet) {
+            const syn = firstFenced(sec.body);
+            docMd = [syn ? '```ngc\n' + syn + '\n```' : '', adocToMarkdown(bullet)].filter(Boolean).join('\n\n');
+          }
+        }
+        put(code, { title: ref.title, docMd });
+      }
     }
     // Sections whose codes never appeared in the quick-ref table.
     for (const sec of sections.values()) {
-      const codes = (sec.heading.match(/\b[A-Za-z]\d+(?:\.\d+)?\b/g) ?? []).filter((c) => CODE_RE.test(c));
+      const codes = (sec.heading.match(/[A-Za-z]\d+(?:\.\d+)?(?:-[A-Za-z]?\d+(?:\.\d+)?)?/g) ?? []).flatMap(expandCodes);
       for (const code of codes) {
-        if (!out[code.toUpperCase()]) put(code, { title: stripLeadingCodes(sec.heading), docMd: buildDoc(sec.body) });
+        if (!out[code]) put(code, { title: stripLeadingCodes(sec.heading), docMd: buildDoc(sec.body) });
       }
     }
   }
@@ -52,7 +64,7 @@ function parseQuickRef(adoc: string): Map<string, QuickRef> {
     const m = re.exec(line);
     if (!m) continue;
     const anchor = m[1].trim().replace(/^(?:gcode|mcode|ocode):/, '');
-    const codes = m[2].split(/[\s,]+/).filter((t) => CODE_RE.test(t));
+    const codes = m[2].split(/[\s,]+/).flatMap(expandCodes);
     if (!codes.length) continue;
     out.set(anchor, { codes, title: adocToMarkdown(m[3]).trim() });
   }
@@ -74,7 +86,7 @@ function parseAnchoredSections(adoc: string): Map<string, Section> {
     while (i < lines.length && !lines[i].trim()) i++;
     const hm = /^==+\s+(.*)$/.exec(lines[i] ?? '');
     if (!hm) continue;
-    const heading = hm[1].replace(/\(\(\([^)]*\)\)\)/g, '').trim();
+    const heading = hm[1].replace(/\(\(\((?:[^()]|\([^()]*\))*\)\)\)/g, '').trim();
     i++;
     const body: string[] = [];
     while (i < lines.length && !anchorRe.test(lines[i])) body.push(lines[i++]);
@@ -143,5 +155,43 @@ function firstProse(body: string[]): string | undefined {
 }
 
 function stripLeadingCodes(heading: string): string {
-  return heading.replace(/^(?:[A-Za-z]\d+(?:\.\d+)?[\s,]*)+/, '').trim() || heading;
+  // Allow dash (range) as a separator between leading codes so a heading like
+  // "M100-M199 User Defined Commands" doesn't leave "-M199 ..." in the title.
+  return heading.replace(/^(?:[A-Za-z]\d+(?:\.\d+)?\s*-?\s*)+/, '').trim() || heading;
+}
+
+/** Expand a code cell token into discrete codes. A plain code passes through; a
+ *  dash-joined range (M62-M65, G54-G59.3) expands to its members; junk -> []. */
+function expandCodes(token: string): string[] {
+  const t = token.trim();
+  if (CODE_RE.test(t)) return [t.toUpperCase()];
+  const m = /^([A-Za-z])(\d+)(?:\.(\d+))?-([A-Za-z]?)(\d+)(?:\.(\d+))?$/.exec(t);
+  if (!m) return [];
+  const letter = m[1].toUpperCase();
+  const startInt = parseInt(m[2], 10);
+  const endInt = parseInt(m[5], 10);
+  const endDec = m[6] ? parseInt(m[6], 10) : 0;
+  if (endInt < startInt || endInt - startInt > 256) {
+    // Out-of-order or absurd range: just take the two endpoints.
+    return [letter + m[2] + (m[3] ? '.' + m[3] : ''), (m[4] || letter).toUpperCase() + m[5] + (m[6] ? '.' + m[6] : '')];
+  }
+  const out: string[] = [];
+  for (let n = startInt; n <= endInt; n++) out.push(letter + n);
+  for (let d = 1; d <= endDec; d++) out.push(`${letter}${endInt}.${d}`);
+  return out;
+}
+
+/** For a multi-code section, return the body bullet documenting `code`
+ *  (`* 'G94' - ...`), joined with its continuation lines. */
+function perCodeBullet(code: string, body: string[]): string | undefined {
+  const re = new RegExp(`^\\*\\s*['\`]?${code}['\`]?[\\s.,'\`-]`, 'i');
+  const i = body.findIndex((l) => re.test(l.trim()));
+  if (i < 0) return undefined;
+  const buf = [body[i].trim().replace(/^\*\s*/, '')];
+  for (let j = i + 1; j < body.length; j++) {
+    const t = body[j];
+    if (/^\s*\*/.test(t) || t.trim() === '') break;
+    buf.push(t.trim());
+  }
+  return buf.join(' ');
 }

@@ -8,19 +8,22 @@ interface PhysLine {
 
 function splitLines(text: string): PhysLine[] {
   const lines: PhysLine[] = [];
+  const n = text.length;
   let start = 0;
-  for (let i = 0; i <= text.length; i++) {
-    if (i === text.length || text.charCodeAt(i) === 10 /* \n */) {
-      let end = i;
-      if (end > start && text.charCodeAt(end - 1) === 13 /* \r */) end--;
-      lines.push({ text: text.slice(start, end), start, end });
+  const push = (end: number): void => {
+    let e = end;
+    if (e > start && text.charCodeAt(e - 1) === 13 /* \r */) e--; // strip CR of a CRLF
+    lines.push({ text: text.slice(start, e), start, end: e });
+  };
+  for (let i = 0; i < n; i++) {
+    const c = text.charCodeAt(i);
+    // Break on LF, or on a bare CR not immediately followed by LF.
+    if (c === 10 || (c === 13 && text.charCodeAt(i + 1) !== 10)) {
+      push(i);
       start = i + 1;
     }
   }
-  // The loop adds a trailing empty line for text ending in \n; drop it.
-  if (lines.length && text.length > 0 && text.charCodeAt(text.length - 1) === 10) {
-    lines.pop();
-  }
+  if (start < n) push(n); // trailing line without a terminator
   return lines;
 }
 
@@ -106,20 +109,36 @@ export function parseIni(text: string): IniFile {
       const lead = ent[1].length;
       const key = ent[2];
       const keyStart = line.start + lead;
-      let valuePart = ent[4];
-      let valueAbsStart = line.start + raw.length - valuePart.length;
+      const firstValue = ent[4];
+      const valueAbsStart = line.start + raw.length - firstValue.length;
       let lineEnd = line.end;
 
-      // Value continuation: trailing backslash joins subsequent physical lines.
-      while (/\\\s*$/.test(valuePart) && li + 1 < physLines.length) {
-        valuePart = valuePart.replace(/\\\s*$/, '');
-        li++;
-        const next = physLines[li];
-        valuePart += '\n' + next.text;
-        lineEnd = next.end;
+      // Value continuation: a trailing backslash joins subsequent physical lines.
+      // Accumulate segments and join once (avoids O(n^2) growing-string concat).
+      let value: IniSpan | undefined;
+      if (/\\\s*$/.test(firstValue) && li + 1 < physLines.length) {
+        const parts: string[] = [];
+        let seg = firstValue;
+        while (/\\\s*$/.test(seg) && li + 1 < physLines.length) {
+          parts.push(seg.replace(/\\\s*$/, ''));
+          li++;
+          const next = physLines[li];
+          seg = next.text;
+          lineEnd = next.end;
+        }
+        parts.push(seg);
+        const joined = parts.join('\n');
+        const trimmed = joined.trim();
+        if (trimmed.length) {
+          // Span the value from its first non-ws char to the last physical line
+          // end (physical offsets — the joined logical length must not be used
+          // against a physical start offset).
+          const start = valueAbsStart + (joined.length - joined.trimStart().length);
+          value = { text: trimmed, start, end: Math.max(start + 1, lineEnd) };
+        }
+      } else {
+        value = makeTrimmedSpan(firstValue, valueAbsStart);
       }
-
-      const value = makeTrimmedSpan(valuePart, valueAbsStart);
       const entry: IniEntry = {
         key: { text: key, start: keyStart, end: keyStart + key.length },
         value,

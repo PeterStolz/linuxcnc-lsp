@@ -13,7 +13,10 @@ export class LineIndex {
     this.length = text.length;
     const starts = [0];
     for (let i = 0; i < text.length; i++) {
-      if (text.charCodeAt(i) === 10 /* \n */) starts.push(i + 1);
+      const c = text.charCodeAt(i);
+      // A line begins after an LF, or after a bare CR not part of a CRLF pair.
+      if (c === 10 /* \n */) starts.push(i + 1);
+      else if (c === 13 /* \r */ && text.charCodeAt(i + 1) !== 10) starts.push(i + 1);
     }
     this.lineStarts = starts;
   }
@@ -55,6 +58,6 @@ export class LineIndex {
     if (line < 0 || line >= this.lineStarts.length) return '';
     const start = this.lineStarts[line];
     const end = line + 1 < this.lineStarts.length ? this.lineStarts[line + 1] : this.length;
-    return this.text.slice(start, end).replace(/\r?\n$/, '');
+    return this.text.slice(start, end).replace(/\r\n$|[\r\n]$/, '');
   }
 }
