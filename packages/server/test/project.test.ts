@@ -69,6 +69,10 @@ describe('active-machine pinning for shared HAL (multi-machine)', () => {
     expect(resolveActiveMachine('/cfg/a/MachineA.ini', uris)).toBe('file:///cfg/a/MachineA.ini');
     expect(resolveActiveMachine('', uris)).toBeUndefined();
     expect(resolveActiveMachine('nope.ini', uris)).toBeUndefined();
+    // ${workspaceFolder} is NOT supported: VS Code doesn't expand variables in
+    // third-party settings, so this literal won't suffix-match any INI path.
+    // The docs steer users to a plain relative path instead.
+    expect(resolveActiveMachine('${workspaceFolder}/MachineA.ini', uris)).toBeUndefined();
   });
 
   it('pickMachine prefers the active machine only when it owns the file', () => {
