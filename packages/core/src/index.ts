@@ -15,3 +15,19 @@ export * from './hal/ast';
 // INI
 export { parseIni } from './ini/parser';
 export * from './ini/ast';
+
+// Diagnostics
+export { RULES, RuleId, resolveSeverity, SeverityName } from './diagnostics/rules';
+export {
+  Diagnostic, DiagnosticSink, DiagnosticSinkOptions, SuppressionIndex, DIAGNOSTIC_SOURCE,
+} from './diagnostics/types';
+export { diagnoseHalIntraFile } from './diagnostics/hal';
+export { diagnoseIniIntraFile } from './diagnostics/ini';
+
+// Providers
+export {
+  SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SemanticTokenItem,
+  buildHalSemanticTokens, buildIniSemanticTokens,
+} from './providers/semanticTokens';
+export { halDocumentSymbols, iniDocumentSymbols } from './providers/documentSymbol';
+export { halFoldingRanges, iniFoldingRanges } from './providers/folding';
