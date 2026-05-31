@@ -1,9 +1,7 @@
 # LinuxCNC LSP & VSCode extension
 
 [![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/PeterStolz.linuxcnc-lsp?label=VS%20Marketplace&logo=visualstudiocode&color=0066b8)](https://marketplace.visualstudio.com/items?itemName=PeterStolz.linuxcnc-lsp)
-[![VS Marketplace installs](https://img.shields.io/visual-studio-marketplace/i/PeterStolz.linuxcnc-lsp?label=installs&color=0066b8)](https://marketplace.visualstudio.com/items?itemName=PeterStolz.linuxcnc-lsp)
 [![Open VSX](https://img.shields.io/open-vsx/v/PeterStolz/linuxcnc-lsp?label=Open%20VSX&logo=eclipseide&color=c160ef)](https://open-vsx.org/extension/PeterStolz/linuxcnc-lsp)
-[![Open VSX downloads](https://img.shields.io/open-vsx/dt/PeterStolz/linuxcnc-lsp?label=downloads&color=c160ef)](https://open-vsx.org/extension/PeterStolz/linuxcnc-lsp)
 [![CI](https://github.com/PeterStolz/linuxcnc-lsp/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterStolz/linuxcnc-lsp/actions/workflows/ci.yml)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
