@@ -95,6 +95,48 @@ describe('cross-file diagnostics', () => {
   });
 });
 
+describe('INI value validation', () => {
+  function iniDiags(text: string) {
+    const m = buildMachineModel({ iniInput: iniFile('file:///v.ini', text), files: [], index });
+    return crossFileDiagnostics(m, index).get('file:///v.ini') ?? [];
+  }
+
+  it('flags a non-numeric value for a real-typed key', () => {
+    const d = iniDiags('[JOINT_0]\nMAX_VELOCITY = fast\n');
+    expect(d.some((x) => x.code === 'ini.value.typeMismatch' && x.message.includes('real number'))).toBe(true);
+  });
+
+  it('accepts a valid real value', () => {
+    const d = iniDiags('[JOINT_0]\nMAX_VELOCITY = 12.5\n');
+    expect(d.some((x) => x.code.startsWith('ini.value'))).toBe(false);
+  });
+
+  it('accepts scientific / signed reals', () => {
+    const d = iniDiags('[JOINT_0]\nMAX_VELOCITY = -1.5e-3\n');
+    expect(d.some((x) => x.code.startsWith('ini.value'))).toBe(false);
+  });
+
+  it('flags an enum value outside the documented set', () => {
+    const d = iniDiags('[JOINT_0]\nTYPE = ROTARY\n');
+    expect(d.some((x) => x.code === 'ini.value.enumMismatch' && x.message.includes('LINEAR'))).toBe(true);
+  });
+
+  it('accepts a documented enum value, case-insensitively', () => {
+    const d = iniDiags('[JOINT_0]\nTYPE = linear\n');
+    expect(d.some((x) => x.code === 'ini.value.enumMismatch')).toBe(false);
+  });
+
+  it('accepts hex literals for integer-typed keys', () => {
+    const d = iniDiags('[EMC]\nDEBUG = 0x7FFFFFFF\n');
+    expect(d.some((x) => x.code.startsWith('ini.value'))).toBe(false);
+  });
+
+  it('does not judge values containing INI substitution', () => {
+    const d = iniDiags('[JOINT_0]\nMAX_VELOCITY = [TRAJ]MAX_LINEAR_VELOCITY\n');
+    expect(d.some((x) => x.code.startsWith('ini.value'))).toBe(false);
+  });
+});
+
 describe('navigation', () => {
   it('go-to-definition on a signal jumps to its first net', () => {
     const m = model();

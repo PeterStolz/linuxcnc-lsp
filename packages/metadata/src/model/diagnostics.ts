@@ -56,6 +56,21 @@ export function crossFileDiagnostics(
     }
   }
 
+  // --- INI value type / enum validation ---
+  for (const ini of model.ini ? [model.ini, ...model.iniIncludes] : []) {
+    for (const section of ini.ini.sections) {
+      for (const entry of section.entries) {
+        if (!entry.value) continue;
+        const def = index.iniKey(section.name.text, entry.key.text);
+        if (!def?.type) continue;
+        const problem = validateIniValue(def.type, entry.value.text, def.doc);
+        if (problem) {
+          sinkFor(ini.uri).add(problem.rule, ini.lineIndex.rangeAt(entry.value.start, entry.value.end), problem.message);
+        }
+      }
+    }
+  }
+
   // --- Unknown component on loadrt ---
   for (const f of model.files) {
     for (const stmt of f.hal.statements) {
@@ -127,6 +142,62 @@ function baseName(uri?: string): string {
   if (!uri) return 'the INI';
   const m = /[^/\\]+$/.exec(uri);
   return m ? m[0] : uri;
+}
+
+type ValueProblem = { rule: 'ini.value.typeMismatch' | 'ini.value.enumMismatch'; message: string } | undefined;
+
+/** Validate an INI value against its documented type. Conservative: only judges
+ *  unambiguous types (numbers, booleans, and enums with a clearly-enumerated
+ *  allowed set), and never judges values that contain INI/HAL substitution or
+ *  span multiple whitespace-separated tokens. */
+function validateIniValue(type: string, value: string, doc?: string): ValueProblem {
+  const v = value.trim();
+  if (!v) return undefined;
+  if (/[[\]$]/.test(v)) return undefined; // contains a substitution — don't judge
+  const t = type.toLowerCase();
+  const numeric = (re: RegExp, label: string): ValueProblem =>
+    re.test(v) ? undefined : { rule: 'ini.value.typeMismatch', message: `Expected ${label} for this key, but got \`${v}\`.` };
+
+  switch (t) {
+    case 'real':
+    case 'float':
+    case 'number':
+      return numeric(/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/, 'a real number');
+    case 'int':
+    case 's32':
+    case 's64':
+      // decimal or hex (LinuxCNC accepts 0x.. for integer keys)
+      return numeric(/^[+-]?(\d+|0x[0-9a-fA-F]+)$/, 'an integer');
+    case 'u32':
+    case 'u64':
+      return numeric(/^\+?(\d+|0x[0-9a-fA-F]+)$/, 'a non-negative integer');
+    case 'bit':
+      return /^[01]$/.test(v) ? undefined : { rule: 'ini.value.typeMismatch', message: `Expected 0 or 1 for this key, but got \`${v}\`.` };
+    case 'bool':
+      return /^(0|1|true|false|yes|no)$/i.test(v)
+        ? undefined
+        : { rule: 'ini.value.typeMismatch', message: `Expected a boolean (1/0, TRUE/FALSE or YES/NO), but got \`${v}\`.` };
+    case 'enum': {
+      const allowed = enumValues(doc);
+      if (!allowed.length) return undefined;
+      if (allowed.some((a) => a.toLowerCase() === v.toLowerCase())) return undefined;
+      return { rule: 'ini.value.enumMismatch', message: `Expected one of ${allowed.map((a) => `\`${a}\``).join(', ')}, but got \`${v}\`.` };
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** Extract an enum's allowed values from its doc, but only when the prose
+ *  clearly enumerates them (avoids treating incidental backticked words as the
+ *  allowed set). */
+function enumValues(doc?: string): string[] {
+  if (!doc || !/\beither\b|\bone of\b|\bor `/i.test(doc)) return [];
+  const out: string[] = [];
+  const re = /`([A-Za-z][A-Za-z0-9_]*)`/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(doc))) out.push(m[1]);
+  return [...new Set(out)];
 }
 
 // Re-export for callers needing instance resolution alongside diagnostics.

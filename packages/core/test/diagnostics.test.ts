@@ -80,9 +80,16 @@ describe('INI intra-file diagnostics', () => {
     expect(d.some((x) => x.code === 'ini.syntax.duplicateKey')).toBe(true);
   });
 
-  it('does NOT flag repeated HALFILE keys', () => {
-    const d = iniDiags('[HAL]\nHALFILE = a.hal\nHALFILE = b.hal\n');
+  it('flags a same-value duplicate as redundantKey (not duplicateKey)', () => {
+    const d = iniDiags('[TRAJ]\nMAX_LINEAR_VELOCITY = 5\nMAX_LINEAR_VELOCITY = 5\n');
+    expect(d.some((x) => x.code === 'ini.syntax.redundantKey')).toBe(true);
     expect(d.some((x) => x.code === 'ini.syntax.duplicateKey')).toBe(false);
+  });
+
+  it('does NOT flag repeated HALFILE keys (repeatable, any value)', () => {
+    const d = iniDiags('[HAL]\nHALFILE = a.hal\nHALFILE = b.hal\nHALFILE = a.hal\n');
+    const dup = d.some((x) => x.code === 'ini.syntax.duplicateKey' || x.code === 'ini.syntax.redundantKey');
+    expect(dup).toBe(false);
   });
 
   it('does NOT flag repeated PLUGIN in [EZTROL] (section-scoped exception)', () => {

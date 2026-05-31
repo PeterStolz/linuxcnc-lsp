@@ -87,8 +87,10 @@ export function diagnoseIniIntraFile(
     sink.add(p.code, lineIndex.rangeAt(p.start, p.end), p.message);
   }
 
-  // Duplicate non-repeatable keys with CONFLICTING values within a section.
-  // (A duplicate with the same value is harmless; LinuxCNC uses the first.)
+  // Duplicate non-repeatable keys within a section. LinuxCNC uses the first
+  // occurrence and silently ignores the rest, so any repeat is reported:
+  //  - different value  -> ini.syntax.duplicateKey  (a value is silently dead)
+  //  - same value       -> ini.syntax.redundantKey  (harmless but redundant)
   for (const section of file.sections) {
     const sectionLc = section.name.text.toLowerCase();
     const firstValue = new Map<string, string>();
@@ -100,11 +102,19 @@ export function diagnoseIniIntraFile(
         firstValue.set(lc, value);
         continue;
       }
-      if (firstValue.get(lc) !== value) {
+      const first = firstValue.get(lc)!;
+      const range = lineIndex.rangeAt(entry.key.start, entry.key.end);
+      if (first !== value) {
         sink.add(
           'ini.syntax.duplicateKey',
-          lineIndex.rangeAt(entry.key.start, entry.key.end),
-          `Duplicate key '${entry.key.text}' in [${section.name.text}] with a different value; LinuxCNC uses the first ('${firstValue.get(lc)}').`,
+          range,
+          `Duplicate key '${entry.key.text}' in [${section.name.text}] with a different value; LinuxCNC uses the first ('${first}').`,
+        );
+      } else {
+        sink.add(
+          'ini.syntax.redundantKey',
+          range,
+          `Redundant duplicate key '${entry.key.text}' in [${section.name.text}] (same value '${value}'); LinuxCNC uses the first occurrence.`,
         );
       }
     }

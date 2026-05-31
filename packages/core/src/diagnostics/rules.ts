@@ -23,7 +23,8 @@ export const RULES: readonly RuleDef[] = [
   { id: 'ini.syntax.malformedLine', defaultSeverity: E, description: 'A line is neither a section header nor a KEY = VALUE entry.' },
   { id: 'ini.syntax.invalidSection', defaultSeverity: E, description: 'A section name is not a valid identifier.' },
   { id: 'ini.syntax.trailingHeaderText', defaultSeverity: W, description: 'Unexpected text after a [SECTION] header.' },
-  { id: 'ini.syntax.duplicateKey', defaultSeverity: H, description: 'A key with conflicting values is defined more than once in a section (LinuxCNC uses the first).' },
+  { id: 'ini.syntax.duplicateKey', defaultSeverity: H, description: 'A key is defined more than once in a section with conflicting values (LinuxCNC uses the first; the later value is silently ignored).' },
+  { id: 'ini.syntax.redundantKey', defaultSeverity: H, description: 'A key is defined more than once in a section with the same value (redundant; LinuxCNC uses the first).' },
 
   // --- Semantic / cross-file (emitted in later milestones) ---
   { id: 'hal.comp.unknownComponent', defaultSeverity: W, description: 'loadrt references a component not in the metadata DB or workspace.' },
@@ -36,6 +37,8 @@ export const RULES: readonly RuleDef[] = [
   { id: 'hal.iniref.sectionMissing', defaultSeverity: E, description: 'A [SECTION]KEY reference names a section absent from the INI.' },
   { id: 'hal.iniref.keyMissing', defaultSeverity: E, description: 'A [SECTION]KEY reference names a key absent from the INI section.' },
   { id: 'ini.key.unreferenced', defaultSeverity: H, description: 'An INI key is not referenced by any HAL file or known core consumer.' },
+  { id: 'ini.value.typeMismatch', defaultSeverity: W, description: 'An INI value does not match the documented type (e.g. a non-number for a real/int key).' },
+  { id: 'ini.value.enumMismatch', defaultSeverity: W, description: 'An INI value is not one of the documented allowed values for an enum key.' },
 ] as const;
 
 export type RuleId = (typeof RULES)[number]['id'];
