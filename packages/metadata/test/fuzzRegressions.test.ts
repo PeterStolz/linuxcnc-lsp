@@ -253,6 +253,37 @@ describe('round-2 adjacent-edge fixes', () => {
   });
 });
 
+describe('round-3 edge fixes (metadata)', () => {
+  it('#1 dedupes a HAL file listed twice -> no overlapping rename edits', () => {
+    const hal = 'net tool-change foo.0.in\n';
+    const uri = 'file:///p.hal';
+    const li = new LineIndex(hal);
+    const m = buildMachineModel({
+      files: [
+        { uri, text: hal, lineIndex: li, hal: parseHal(hal), phase: 'postgui', order: 0 },
+        { uri, text: hal, lineIndex: li, hal: parseHal(hal), phase: 'postgui', order: 1 },
+      ],
+      index,
+    });
+    const edit = rename(m, uri, hal.indexOf('tool-change') + 2, 'newsig');
+    expect(edit!.changes![uri].length).toBe(1); // one edit, not two overlapping
+  });
+
+  it('#3 M1 shows Program Pause, not the M100-M199 user-defined range', () => {
+    expect(ghover('M1', 'M1')).toContain('Program Pause');
+    expect(ghover('M1', 'M1')).not.toContain('User Defined');
+  });
+
+  it('#7 hex / hexfloat accepted for real-typed INI keys', () => {
+    expect(codes(model('[AXIS_X]\nMAX_VELOCITY = 0x10\n', []), 'file:///m.ini')).not.toContain('ini.value.typeMismatch');
+    expect(codes(model('[AXIS_X]\nMAX_VELOCITY = 0x1.8p3\n', []), 'file:///m.ini')).not.toContain('ini.value.typeMismatch');
+  });
+
+  it('#8 M50 hover has a non-empty doc body', () => {
+    expect(index.gcodeWord('M50')?.docMd).toBeTruthy();
+  });
+});
+
 describe('adoc converter (fuzz #24/#25)', () => {
   it('strips a nested index macro without leaking a stray paren', () => {
     const out = adocToMarkdown('(((spindle (HAL pins))))The text.');

@@ -155,7 +155,10 @@ function firstProse(body: string[]): string | undefined {
     if (inFence) continue;
     const t = line.trim();
     if (!t) { if (para.length) break; else continue; }
-    if (/^(\[|=+\s|\.|\/\/|\*|image:)/.test(t)) { if (para.length) break; else continue; }
+    // Skip attribute lines, sub-headings, block titles, comments, bullets,
+    // images, and `(((index)))` macro-only lines (which adoc->md strips to
+    // nothing, leaving an empty body).
+    if (/^(\[|=+\s|\.|\/\/|\*|image:|\(\(\()/.test(t)) { if (para.length) break; else continue; }
     para.push(t);
   }
   return para.length ? para.join(' ') : undefined;
@@ -178,8 +181,9 @@ function expandCodes(token: string): string[] {
   const startInt = parseInt(m[2], 10);
   const endInt = parseInt(m[5], 10);
   const endDec = m[6] ? parseInt(m[6], 10) : 0;
-  if (endInt < startInt || endInt - startInt > 256) {
-    // Out-of-order or absurd range: just take the two endpoints.
+  if (endInt < startInt || endInt - startInt > 256 || endDec > 256) {
+    // Out-of-order or absurd range (incl. an unbounded decimal sub-range like
+    // G0.0-G0.99999999): just take the two endpoints.
     return [letter + m[2] + (m[3] ? '.' + m[3] : ''), (m[4] || letter).toUpperCase() + m[5] + (m[6] ? '.' + m[6] : '')];
   }
   const out: string[] = [];
@@ -193,8 +197,11 @@ function expandCodes(token: string): string[] {
 function codesInBullets(body: string[]): string[] {
   const out: string[] = [];
   for (const line of body) {
-    const m = /^\s*\*\s*['`]?([A-Za-z]\d+(?:\.\d+)?)['`]?[\s.,'`-]/.exec(line);
-    if (m && CODE_RE.test(m[1])) out.push(m[1].toUpperCase());
+    // The `\1` backreference requires the opening quote (if any) to actually
+    // close right after the code, so a glued placeholder like `'M1--'` is NOT
+    // read as the literal code `M1`.
+    const m = /^\s*\*\s*(['`]?)([A-Za-z]\d+(?:\.\d+)?)\1(?=[\s.,):;\-]|$)/.exec(line);
+    if (m && CODE_RE.test(m[2])) out.push(m[2].toUpperCase());
   }
   return out;
 }
@@ -202,7 +209,8 @@ function codesInBullets(body: string[]): string[] {
 /** For a multi-code section, return the body bullet documenting `code`
  *  (`* 'G94' - ...`), joined with its continuation lines. */
 function perCodeBullet(code: string, body: string[]): string | undefined {
-  const re = new RegExp(`^\\*\\s*['\`]?${code}['\`]?[\\s.,'\`-]`, 'i');
+  const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^\\*\\s*(['\`]?)${esc}\\1(?=[\\s.,):;\\-]|$)`, 'i');
   const i = body.findIndex((l) => re.test(l.trim()));
   if (i < 0) return undefined;
   const buf = [body[i].trim().replace(/^\*\s*/, '')];

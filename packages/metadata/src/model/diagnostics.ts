@@ -191,7 +191,9 @@ function validateIniValue(type: string, value: string, doc?: string): ValueProbl
     case 'real':
     case 'float':
     case 'number':
-      return numeric(/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/, 'a real number');
+      // decimal/scientific, or a hex integer / C99 hexfloat (strtod accepts
+      // 0x10 and 0x1.8p3 — but NOT 0o/0b, unlike the integer types).
+      return numeric(/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$|^[+-]?0[xX][0-9a-fA-F]*\.?[0-9a-fA-F]*([pP][+-]?\d+)?$/, 'a real number');
     case 'int':
     case 's32':
     case 's64':

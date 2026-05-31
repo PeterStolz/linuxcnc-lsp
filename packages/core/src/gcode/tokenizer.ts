@@ -101,12 +101,26 @@ export function tokenizeGcode(text: string): GcodeToken[] {
         continue;
       }
 
-      // O-word: O<number> or O<name>, then (after whitespace) a keyword.
+      // O-word: O<number>, O<name>, or the indirection forms O[expr] / O#param,
+      // then (after whitespace) a keyword.
       if (letter === 'O') {
         i++;
         if (text[i] === '<') {
           while (i < n && text[i] !== '>' && text[i] !== '\n' && text[i] !== '\r') i++;
           if (i < n && text[i] === '>') i++;
+        } else if (text[i] === '[') {
+          // computed label: consume a balanced [ ... ] expression.
+          let depth = 0;
+          while (i < n && text[i] !== '\n' && text[i] !== '\r') {
+            if (text[i] === '[') depth++;
+            else if (text[i] === ']') { depth--; if (depth === 0) { i++; break; } }
+            i++;
+          }
+        } else if (text[i] === '#') {
+          // indirect label via a parameter reference (#<name> / #123 / ##n).
+          while (i < n && text[i] === '#') i++;
+          if (text[i] === '<') { while (i < n && text[i] !== '>' && text[i] !== '\n' && text[i] !== '\r') i++; if (text[i] === '>') i++; }
+          else while (i < n && isDigit(text[i])) i++;
         } else {
           while (i < n && isDigit(text[i])) i++;
         }
