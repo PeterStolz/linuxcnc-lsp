@@ -23,7 +23,7 @@ export const RULES: readonly RuleDef[] = [
   { id: 'ini.syntax.malformedLine', defaultSeverity: E, description: 'A line is neither a section header nor a KEY = VALUE entry.' },
   { id: 'ini.syntax.invalidSection', defaultSeverity: E, description: 'A section name is not a valid identifier.' },
   { id: 'ini.syntax.trailingHeaderText', defaultSeverity: W, description: 'Unexpected text after a [SECTION] header.' },
-  { id: 'ini.syntax.duplicateKey', defaultSeverity: W, description: 'A key that should be unique is defined more than once in a section.' },
+  { id: 'ini.syntax.duplicateKey', defaultSeverity: H, description: 'A key with conflicting values is defined more than once in a section (LinuxCNC uses the first).' },
 
   // --- Semantic / cross-file (emitted in later milestones) ---
   { id: 'hal.comp.unknownComponent', defaultSeverity: W, description: 'loadrt references a component not in the metadata DB or workspace.' },

@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "gen:db": "tsx scripts/regenerate-db.ts",
+    "corpus": "tsx scripts/corpus-check.ts",
     "package": "npm run build && cd packages/client && vsce package --no-dependencies -o ../../linuxcnc-lsp.vsix"
   },
   "devDependencies": {

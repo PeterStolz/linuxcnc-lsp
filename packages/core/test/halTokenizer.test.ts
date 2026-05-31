@@ -104,4 +104,18 @@ describe('HAL tokenizer', () => {
   it('produces no logical line for blank/whitespace-only input', () => {
     expect(tokenizeHal('\n\n   \n')).toEqual([]);
   });
+
+  it('makes forward progress on stray boundary characters (no infinite loop)', () => {
+    // A stray '(' and a non-iniref '[' must not hang the tokenizer.
+    const lines = tokenizeHal('setp x (  )\nnet a [ b');
+    expect(lines.length).toBe(2);
+    expect(lines[0].tokens.some((t) => t.text === '(')).toBe(true);
+    expect(lines[1].tokens.some((t) => t.text === '[')).toBe(true);
+  });
+
+  it('tokenizes every printable ASCII char without hanging', () => {
+    let s = '';
+    for (let c = 32; c < 127; c++) s += String.fromCharCode(c);
+    expect(() => tokenizeHal(s + '\n' + s)).not.toThrow();
+  });
 });

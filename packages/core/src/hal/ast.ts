@@ -8,6 +8,7 @@ export const HAL_COMMANDS = [
   'addf', 'delf', 'initf', 'start', 'stop',
   'show', 'list', 'save', 'source', 'alias', 'unalias',
   'lock', 'unlock', 'status', 'help', 'echo', 'unecho', 'print', 'debug', 'item',
+  'quit', 'exit',
 ] as const;
 
 export type HalCommand = (typeof HAL_COMMANDS)[number];

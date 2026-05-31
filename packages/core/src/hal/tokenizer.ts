@@ -141,7 +141,14 @@ export function tokenizeHal(text: string): HalLogicalLine[] {
       // Bare word / number: read up to the next boundary.
       let j = i;
       while (j < n && !isWordBoundary(text[j])) j++;
-      // A '[' inside a word (e.g. value=[INI]X) is handled by stopping at '['.
+      if (j === i) {
+        // The character is a boundary that no branch above consumed (e.g. a
+        // stray '(' or a '[' that did not form a valid INI ref). Emit it as a
+        // single Unknown token so we always make forward progress.
+        tokens.push({ kind: HalTokenKind.Unknown, start: i, end: i + 1, text: text[i] });
+        i++;
+        continue;
+      }
       const raw = text.slice(i, j);
       const kind = NUMBER_RE.test(raw) ? HalTokenKind.Number : HalTokenKind.Word;
       tokens.push({ kind, start: i, end: j, text: raw });
