@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "LinuxCNC HAL",
+  "scopeName": "source.hal",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#command" },
+    { "include": "#iniref" },
+    { "include": "#envvar" },
+    { "include": "#operator" },
+    { "include": "#string" },
+    { "include": "#number" },
+    { "include": "#dotted" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.hal"
+    },
+    "command": {
+      "match": "(?i)(?<=^|\\s)(loadrt|unloadrt|loadusr|waitusr|unloadusr|unload|newsig|delsig|sets|gets|stype|ptype|getp|setp|linkps|linksp|linkpp|net|unlinkp|addf|delf|initf|start|stop|show|item|save|source|alias|unalias|list|lock|unlock|status|help|echo|unecho|print|debug)\\b",
+      "name": "keyword.control.command.hal"
+    },
+    "iniref": {
+      "match": "(\\[)([A-Za-z_][A-Za-z0-9_]*)(\\])(\\(?)([A-Za-z_][A-Za-z0-9_]*)(\\)?)",
+      "captures": {
+        "1": { "name": "punctuation.definition.iniref.hal" },
+        "2": { "name": "entity.name.namespace.section.hal" },
+        "3": { "name": "punctuation.definition.iniref.hal" },
+        "4": { "name": "punctuation.definition.iniref.hal" },
+        "5": { "name": "variable.other.iniref.key.hal" },
+        "6": { "name": "punctuation.definition.iniref.hal" }
+      }
+    },
+    "envvar": {
+      "patterns": [
+        { "match": "\\$\\([A-Za-z_]\\w*\\)", "name": "variable.parameter.env.hal" },
+        { "match": "\\$[A-Za-z_]\\w*", "name": "variable.parameter.env.hal" }
+      ]
+    },
+    "operator": {
+      "match": "=>|<=|=",
+      "name": "keyword.operator.assignment.hal"
+    },
+    "string": {
+      "patterns": [
+        { "begin": "\"", "end": "\"", "name": "string.quoted.double.hal" },
+        { "begin": "'", "end": "'", "name": "string.quoted.single.hal" }
+      ]
+    },
+    "number": {
+      "patterns": [
+        { "match": "(?<![\\w.])[+-]?0[xX][0-9a-fA-F]+\\b", "name": "constant.numeric.hex.hal" },
+        { "match": "(?<![\\w.])[+-]?0[oO][0-7]+\\b", "name": "constant.numeric.octal.hal" },
+        { "match": "(?<![\\w.])[+-]?0[bB][01]+\\b", "name": "constant.numeric.binary.hal" },
+        { "match": "(?<![\\w.])[+-]?\\d+\\.\\d+([eE][+-]?\\d+)?", "name": "constant.numeric.float.hal" },
+        { "match": "(?<![\\w.])[+-]?\\d+[eE][+-]?\\d+", "name": "constant.numeric.float.hal" },
+        { "match": "(?<![\\w.])[+-]?\\d+\\b", "name": "constant.numeric.integer.hal" }
+      ]
+    },
+    "dotted": {
+      "match": "[A-Za-z_][\\w-]*(\\.[\\w-]+)+",
+      "name": "variable.other.pin.hal"
+    }
+  }
+}

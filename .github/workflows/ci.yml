@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: Lint, typecheck, unit + golden corpus
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: VSCode integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run @vscode/test-electron under xvfb
+        run: xvfb-run -a npm run test:e2e --workspace=linuxcnc-lsp
+        # test:e2e is added in the P6 milestone; tolerated as a no-op until then.
+        continue-on-error: true
+
+  package:
+    name: Package VSIX
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx --workspace=linuxcnc-lsp @vscode/vsce package --no-dependencies -o linuxcnc-lsp.vsix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linuxcnc-lsp-vsix
+          path: linuxcnc-lsp.vsix

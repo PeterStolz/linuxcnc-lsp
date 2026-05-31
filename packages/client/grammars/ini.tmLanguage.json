@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "LinuxCNC INI",
+  "scopeName": "source.linuxcnc-ini",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#section" },
+    { "include": "#include" },
+    { "include": "#entry" }
+  ],
+  "repository": {
+    "comment": {
+      "comment": "In LinuxCNC INI a comment is only a comment when # or ; is the first non-whitespace character of the line; a trailing '# ...' is part of the value (see ini-config.adoc).",
+      "match": "^\\s*[#;].*$",
+      "name": "comment.line.ini"
+    },
+    "section": {
+      "match": "^\\s*(\\[)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.section.begin.ini" },
+        "2": { "name": "entity.name.section.ini" },
+        "3": { "name": "punctuation.definition.section.end.ini" }
+      }
+    },
+    "include": {
+      "match": "^\\s*(#INCLUDE)\\s+(.*)$",
+      "captures": {
+        "1": { "name": "keyword.control.include.ini" },
+        "2": { "name": "string.unquoted.include.ini" }
+      }
+    },
+    "entry": {
+      "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*(=)(.*)$",
+      "captures": {
+        "1": { "name": "variable.other.key.ini" },
+        "2": { "name": "keyword.operator.assignment.ini" },
+        "3": {
+          "patterns": [
+            { "match": "(?i)\\b(TRUE|FALSE|YES|NO|ON|OFF)\\b", "name": "constant.language.boolean.ini" },
+            { "match": "[+-]?\\d+\\.\\d+([eE][+-]?\\d+)?", "name": "constant.numeric.float.ini" },
+            { "match": "[+-]?\\d+\\b", "name": "constant.numeric.integer.ini" },
+            { "match": "\\\\$", "name": "constant.character.escape.continuation.ini" }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "name": "linuxcnc-lsp",
+  "displayName": "LinuxCNC",
+  "description": "Language support for LinuxCNC HAL, INI and G-code files",
+  "version": "0.1.0",
+  "publisher": "linuxcnc-community",
+  "license": "GPL-2.0-or-later",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Linters"],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "hal",
+        "aliases": ["LinuxCNC HAL", "hal"],
+        "extensions": [".hal"],
+        "configuration": "./grammars/hal.language-configuration.json"
+      },
+      {
+        "id": "linuxcnc-ini",
+        "aliases": ["LinuxCNC INI"],
+        "extensions": [".ini"],
+        "filenames": [],
+        "configuration": "./grammars/ini.language-configuration.json"
+      },
+      {
+        "id": "gcode",
+        "aliases": ["G-Code", "RS274NGC"],
+        "extensions": [".ngc", ".nc", ".gcode", ".tap"],
+        "configuration": "./grammars/gcode.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "hal",
+        "scopeName": "source.hal",
+        "path": "./grammars/hal.tmLanguage.json"
+      },
+      {
+        "language": "linuxcnc-ini",
+        "scopeName": "source.linuxcnc-ini",
+        "path": "./grammars/ini.tmLanguage.json"
+      },
+      {
+        "language": "gcode",
+        "scopeName": "source.gcode",
+        "path": "./grammars/gcode.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "LinuxCNC",
+      "properties": {
+        "linuxcnc.libDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to the LinuxCNC system HAL library directory used to resolve `LIB:` HALFILE references. Leave empty if LinuxCNC is not installed locally; `LIB:` files are then treated as external and dependent checks are disabled."
+        },
+        "linuxcnc.metadata.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Override path to a metadata JSON database (regenerated from a specific LinuxCNC version). Empty uses the bundled database."
+        },
+        "linuxcnc.diagnostics.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable diagnostics (validation)."
+        },
+        "linuxcnc.diagnostics.rules": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Per-rule severity overrides, e.g. `{ \"hal.signal.noReader\": \"off\" }`. Values: `error`, `warning`, `hint`, `off`."
+        },
+        "linuxcnc.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace the communication between VSCode and the language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "vscode:prepublish": "node esbuild.js --production"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.4.1",
+    "mocha": "^10.7.0"
+  }
+}

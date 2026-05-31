@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "G-Code",
+  "scopeName": "source.gcode",
+  "patterns": [
+    { "include": "#comment-paren" },
+    { "include": "#comment-semi" },
+    { "include": "#oword" },
+    { "include": "#gword" },
+    { "include": "#mword" },
+    { "include": "#parameter" },
+    { "include": "#axis-word" },
+    { "include": "#feed-word" },
+    { "include": "#number" }
+  ],
+  "repository": {
+    "comment-paren": {
+      "begin": "\\(",
+      "end": "\\)",
+      "name": "comment.block.gcode"
+    },
+    "comment-semi": {
+      "match": ";.*$",
+      "name": "comment.line.semicolon.gcode"
+    },
+    "oword": {
+      "match": "(?i)\\bo\\s*(<[^>]+>|\\d+)\\s*(sub|endsub|call|do|while|endwhile|if|elseif|else|endif|repeat|endrepeat|return|break|continue)?\\b",
+      "name": "keyword.control.oword.gcode"
+    },
+    "gword": {
+      "match": "(?i)g\\d+(\\.\\d+)?",
+      "name": "keyword.other.gcode.g"
+    },
+    "mword": {
+      "match": "(?i)m\\d+(\\.\\d+)?",
+      "name": "keyword.other.gcode.m"
+    },
+    "parameter": {
+      "patterns": [
+        { "match": "#<[^>]+>", "name": "variable.other.named-parameter.gcode" },
+        { "match": "#\\d+", "name": "variable.other.numbered-parameter.gcode" },
+        { "match": "#", "name": "variable.other.parameter.gcode" }
+      ]
+    },
+    "axis-word": {
+      "match": "(?i)(?<![A-Za-z])[XYZABCUVWIJKPQR](?=[\\s+\\-.\\d#\\[])",
+      "name": "entity.name.function.axis.gcode"
+    },
+    "feed-word": {
+      "match": "(?i)(?<![A-Za-z])[FSTDHL](?=[\\s+\\-.\\d#\\[])",
+      "name": "support.function.word.gcode"
+    },
+    "number": {
+      "match": "[+-]?\\d*\\.?\\d+",
+      "name": "constant.numeric.gcode"
+    }
+  }
+}

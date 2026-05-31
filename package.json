@@ -1,0 +1,37 @@
+{
+  "name": "linuxcnc-lsp-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Language Server + VSCode extension for LinuxCNC HAL, INI and G-code files",
+  "license": "GPL-2.0-or-later",
+  "engines": {
+    "node": ">=18"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/metadata",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc -b && tsc -p packages/client/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "gen:db": "tsx scripts/regenerate-db.ts",
+    "package": "npm run build && cd packages/client && vsce package --no-dependencies -o ../../linuxcnc-lsp.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "esbuild": "^0.23.0",
+    "eslint": "^9.9.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  }
+}

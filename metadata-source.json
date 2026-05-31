@@ -1,0 +1,8 @@
+{
+  "repo": "https://github.com/LinuxCNC/linuxcnc.git",
+  "commit": "7351e0ee04c88c211a2879a979a6a91c3fba0dbe",
+  "describe": "7351e0e",
+  "lcncVersion": "2.10.0~pre1",
+  "localCheckout": "/Users/peter/Documents/repos/linuxcnc",
+  "note": "The metadata DB bundled with the extension is extracted from this pinned LinuxCNC source. Regenerate with `npm run gen:db`."
+}
