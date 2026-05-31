@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   parseHalDump, parseHalDumpNames, parseCompFile, parseMan9, extractIniConfig, extractHoming,
-  assembleDB, HAL_COMMANDS, ParsedComp, ParsedMan9,
+  extractGcode, assembleDB, HAL_COMMANDS, ParsedComp, ParsedMan9,
 } from '../packages/metadata/src/index';
 
 const REPO = path.resolve(__dirname, '..');
@@ -79,6 +79,14 @@ const homingText = readIf(path.join(LCNC, 'docs/src/config/ini-homing.adoc')) ??
 const homingKeys = extractHoming(homingText);
 console.log(`ini: ${Object.keys(iniSections).length} sections, ${consumedKeys.length} keys; homing: ${Object.keys(homingKeys).length}`);
 
+// 5. G-code / M-code / other-word docs.
+const gcodeWords = extractGcode(
+  readIf(path.join(LCNC, 'docs/src/gcode/g-code.adoc')) ?? '',
+  readIf(path.join(LCNC, 'docs/src/gcode/m-code.adoc')) ?? '',
+  readIf(path.join(LCNC, 'docs/src/gcode/other-code.adoc')) ?? '',
+);
+console.log(`gcode: ${Object.keys(gcodeWords).length} words`);
+
 const db = assembleDB({
   source: {
     repo: sourceInfo.repo,
@@ -95,6 +103,7 @@ const db = assembleDB({
   homingKeys,
   knownNames: [...knownNames],
   commands: HAL_COMMANDS,
+  gcodeWords,
 });
 
 const outPath = path.join(META, 'data/db.json');

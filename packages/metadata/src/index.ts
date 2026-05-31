@@ -8,6 +8,7 @@ export { hoverHal, hoverIni } from './providers/hover';
 export {
   completeHal, completeIni, HalCompletionContext, IniCompletionContext,
 } from './providers/completion';
+export { hoverGcode, completeGcode } from './providers/gcode';
 
 // Machine model + cross-file analysis
 export * from './model/types';
@@ -37,6 +38,7 @@ export { parseHalDump, parseHalDumpNames, DumpedComponent } from './extractors/h
 export { parseCompFile, ParsedComp } from './extractors/comp';
 export { parseMan9, ParsedMan9 } from './extractors/man9';
 export { extractIniConfig, extractHoming } from './extractors/iniDocs';
+export { extractGcode } from './extractors/gcode';
 export { HAL_COMMANDS } from './extractors/commands';
 export { adocToMarkdown, splitSections } from './adoc';
 

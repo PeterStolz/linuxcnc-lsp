@@ -16,6 +16,9 @@ export * from './hal/ast';
 export { parseIni } from './ini/parser';
 export * from './ini/ast';
 
+// G-code
+export { tokenizeGcode, gcodeTokenAt, GcodeToken, GcodeTokenKind, O_KEYWORDS } from './gcode/tokenizer';
+
 // Diagnostics
 export { RULES, RuleId, resolveSeverity, SeverityName } from './diagnostics/rules';
 export {

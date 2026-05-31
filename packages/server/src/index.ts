@@ -10,6 +10,7 @@ import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
   definition, references, documentHighlights, MachineModel, iniRefsTo,
   completeHal, completeIni, prepareRename, rename, codeActions,
+  hoverGcode, completeGcode,
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
@@ -241,6 +242,7 @@ connection.onHover((params) => {
     const refCount = mm ? (s: string, k: string) => iniRefsTo(mm, s, k).length : undefined;
     return hoverIni(model.ini, model.lineIndex, offset, metadata, refCount);
   }
+  if (model.kind === 'gcode') return hoverGcode(model.text, model.lineIndex, offset, metadata);
   return null;
 });
 
@@ -296,6 +298,7 @@ connection.onCompletion((params): CompletionItem[] => {
   if (model.kind === 'ini' && model.ini) {
     return completeIni({ ini: model.ini, lineIndex: model.lineIndex, text: model.text, offset, index: metadata });
   }
+  if (model.kind === 'gcode') return completeGcode(model.text, model.lineIndex, offset, metadata);
   return [];
 });
 

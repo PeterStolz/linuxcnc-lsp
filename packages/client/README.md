@@ -19,6 +19,11 @@ Language support for **LinuxCNC** configuration files: `.hal` (HAL), `.ini`
   names, component pins (incl. `joint.N.*`/`axis.x.*` motion pins), and
   `[SECTION]KEY` INI references — plus section/key completion inside the INI
 - Custom workspace `.comp` components are parsed and contribute hover
+- INI value checks: warns when a value doesn't match its documented type (e.g. a
+  non-number for a `real`/`int` key) or falls outside an `enum`'s allowed values
+- G-code (`.ngc`): hover docs for G/M/F/S/T words (from the LinuxCNC docs),
+  explanations for axis words, numbered/named parameters and O-word control flow,
+  plus completion of G/M codes and O-word keywords
 
 Open a folder containing your machine config (`.ini` + `.hal` files) for the
 cross-file features to work.

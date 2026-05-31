@@ -20363,7 +20363,578 @@
   "TOOL_CHANGE_AT_G30",
   "RANDOM_TOOLCHANGER"
  ],
- "gcodeWords": {},
+ "gcodeWords": {
+  "G0": {
+   "code": "G0",
+   "title": "Coordinated Motion at Rapid Rate",
+   "docMd": "```ngc\nG0 <axes>\n```\n\nFor rapid motion, program 'G0 axes', where all the axis words are optional. The 'G0' is optional if the current motion mode is 'G0'. This will produce coordinated motion to the destination point at the maximum rapid rate (or slower). 'G0' is typically used as a positioning move."
+  },
+  "G1": {
+   "code": "G1",
+   "title": "Coordinated Motion at Feed Rate",
+   "docMd": "```ngc\nG1 axes\n```\n\nFor linear (straight line) motion at programmed feed rate (for cutting or not), program 'G1 'axes'', where all the axis words are optional. The 'G1' is optional if the current motion mode is 'G1'. This will produce coordinated motion to the destination point at the current feed rate (or slower)."
+  },
+  "G2": {
+   "code": "G2",
+   "title": "Coordinated Helical Motion at Feed Rate",
+   "docMd": "```ngc\nG2 or G3 axes offsets (center format)\nG2 or G3 axes R- (radius format)\nG2 or G3 offsets|R- <P-> (full circles)\n```\n\nA circular or helical arc is specified using either 'G2' (clockwise arc) or 'G3' (counterclockwise arc) at the current feed rate. The direction (CW, CCW) is as viewed from the positive end of the axis about which the circular motion occurs."
+  },
+  "G3": {
+   "code": "G3",
+   "title": "Coordinated Helical Motion at Feed Rate",
+   "docMd": "```ngc\nG2 or G3 axes offsets (center format)\nG2 or G3 axes R- (radius format)\nG2 or G3 offsets|R- <P-> (full circles)\n```\n\nA circular or helical arc is specified using either 'G2' (clockwise arc) or 'G3' (counterclockwise arc) at the current feed rate. The direction (CW, CCW) is as viewed from the positive end of the axis about which the circular motion occurs."
+  },
+  "G4": {
+   "code": "G4",
+   "title": "Dwell",
+   "docMd": "```ngc\nG4 P-\n```\n\nThe P number is the time in seconds that all axes will remain unmoving. The P number is a floating point number so fractions of a second may be used. G4 does not affect spindle, coolant and any I/O."
+  },
+  "G5": {
+   "code": "G5",
+   "title": "Cubic Spline",
+   "docMd": "```ngc\nG5 X- Y- <I- J-> P- Q-\n```\n\nG5 creates a cubic B-spline in the XY plane with the X and Y axes only. P and Q must both be specified for every G5 command."
+  },
+  "G5.1": {
+   "code": "G5.1",
+   "title": "Quadratic B-Spline",
+   "docMd": "```ngc\nG5.1 X- Y- I- J-\n```\n\nG5.1 creates a quadratic B-spline in the XY plane with the X and Y axis only.  Not specifying I or J gives zero offset for the unspecified axis, so one or both must be given."
+  },
+  "G5.2": {
+   "code": "G5.2",
+   "title": "NURBS, add control point",
+   "docMd": "```ngc\nG5.2 <P-> <X- Y-> <L->\nX- Y- <P->\n...\nG5.3\n```\n\nWARNING: G5.2, G5.3 is experimental and not fully tested."
+  },
+  "G5.3": {
+   "code": "G5.3",
+   "title": "NURBS, add control point",
+   "docMd": "```ngc\nG5.2 <P-> <X- Y-> <L->\nX- Y- <P->\n...\nG5.3\n```\n\nWARNING: G5.2, G5.3 is experimental and not fully tested."
+  },
+  "G7": {
+   "code": "G7",
+   "title": "Diameter Mode (lathe)",
+   "docMd": "```ngc\nG7\n```\n\nProgram G7 to enter the diameter mode for axis X on a lathe. When in the diameter mode the X axis moves on a lathe will be 1/2 the distance to the center of the lathe. For example X1 would move the cutter to 0.500\" from the center of the lathe thus giving a 1\" diameter part."
+  },
+  "G8": {
+   "code": "G8",
+   "title": "Radius Mode (lathe)",
+   "docMd": "```ngc\nG8\n```\n\nProgram G8 to enter the radius mode for axis X on a lathe. When in Radius mode the X axis moves on a lathe will be the distance from the center. Thus a cut at X1 would result in a part that is 2\" in diameter. G8 is default at power up."
+  },
+  "G10": {
+   "code": "G10",
+   "title": "Coordinate System Origin Setting Calculated",
+   "docMd": "```ngc\nG10 L20 P- axes\n```\n\nG10 L20 is similar to G10 L2 except that instead of setting the offset/entry to the given value, it is set to a calculated value that makes the current coordinates become the given value."
+  },
+  "L0": {
+   "code": "L0",
+   "title": "Reload Tool Table Data",
+   "docMd": "```ngc\nG10 L0\n```\n\nG10 L0 reload all tool table data.  Requires that there is no current tool loaded in spindle."
+  },
+  "L1": {
+   "code": "L1",
+   "title": "Set Tool Table Entry",
+   "docMd": "```ngc\nG10 L1 P- axes <R- I- J- Q->\n```\n\nG10 L1 sets the tool table for the 'P' tool number to the values of the words."
+  },
+  "L10": {
+   "code": "L10",
+   "title": "Set Tool Table, Calculated, Workpiece",
+   "docMd": "```ngc\nG10 L10 P- axes <R- I- J- Q->\n```\n\nG10 L10 changes the tool table entry for tool P so that if the tool offset is reloaded, with the machine in its current position and with the current G5x and G52/G92 offsets active, the current coordinates for the given axes will become the given values. The axes that are not specified in the G10 L10 command will not be changed. This could be useful with a probe move as described in the G38 section."
+  },
+  "L11": {
+   "code": "L11",
+   "title": "Set Tool Table, Calculated, Fixture",
+   "docMd": "```ngc\nG10 L11 P- axes <R- I- J- Q->\n```\n\nG10 L11 is just like G10 L10 except that instead of setting the entry according to the current offsets, it is set so that the current coordinates would become the given value if the new tool offset is reloaded and the machine is placed in the G59.3 coordinate system without any G52/G92 offset active."
+  },
+  "L2": {
+   "code": "L2",
+   "title": "Coordinate System Origin Setting",
+   "docMd": "```ngc\nG10 L2 P- <axes R->\n```\n\nG10 L2 offsets the origin of the axes in the coordinate system specified to the value of the axis word. The offset is from the machine origin established during homing. The offset value will replace any current offsets in effect for the coordinate system specified. Axis words not used will not be changed."
+  },
+  "L20": {
+   "code": "L20",
+   "title": "Coordinate System Origin Setting Calculated",
+   "docMd": "```ngc\nG10 L20 P- axes\n```\n\nG10 L20 is similar to G10 L2 except that instead of setting the offset/entry to the given value, it is set to a calculated value that makes the current coordinates become the given value."
+  },
+  "G17": {
+   "code": "G17",
+   "title": "Plane Select",
+   "docMd": "These codes set the current plane as follows:"
+  },
+  "G19.1": {
+   "code": "G19.1",
+   "title": "Plane Select",
+   "docMd": "These codes set the current plane as follows:"
+  },
+  "G20": {
+   "code": "G20",
+   "title": "Set Units of Measure",
+   "docMd": "It is a good idea to include units in the preamble of each G-code file."
+  },
+  "G21": {
+   "code": "G21",
+   "title": "Set Units of Measure",
+   "docMd": "It is a good idea to include units in the preamble of each G-code file."
+  },
+  "G28": {
+   "code": "G28",
+   "title": "Go to Predefined Position",
+   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\nOnly use G28 when your machine is homed to a repeatable position and the desired G28 position has been stored with G28.1."
+  },
+  "G28.1": {
+   "code": "G28.1",
+   "title": "Go to Predefined Position",
+   "docMd": "```ngc\nG28 Z2.5 (rapid to Z2.5 then to Z location specified in #5163)\n```\n\nOnly use G28 when your machine is homed to a repeatable position and the desired G28 position has been stored with G28.1."
+  },
+  "G30": {
+   "code": "G30",
+   "title": "Go to Predefined Position",
+   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\nOnly use G30 when your machine is homed to a repeatable position and the desired G30 position has been stored with G30.1."
+  },
+  "G30.1": {
+   "code": "G30.1",
+   "title": "Go to Predefined Position",
+   "docMd": "```ngc\nG30 Z2.5 (rapid to Z2.5 then to the Z location specified in #5183)\n```\n\nOnly use G30 when your machine is homed to a repeatable position and the desired G30 position has been stored with G30.1."
+  },
+  "G33": {
+   "code": "G33",
+   "title": "Spindle Synchronized Motion",
+   "docMd": "```ngc\nG33 X- Y- Z- K- $-\n```\n\nFor spindle-synchronized motion in one direction, code 'G33 X- Y- Z- K-' where K gives the distance moved in XYZ for each revolution of the spindle. For instance, if starting at 'Z=0', 'G33 Z-1 K.0625' produces a 1 inch motion in Z over 16 revolutions of the spindle. This command might be part of a program to produce a 16TPI thread. Another example in metric, 'G33 Z-15 K1.5' produces a movement of 15mm while the spindle rotates 10 times for a thread of 1.5mm."
+  },
+  "G33.1": {
+   "code": "G33.1",
+   "title": "Rigid Tapping",
+   "docMd": "```ngc\nG33.1 X- Y- Z- K- I- $-\n```\n\nFor Z only tapping preposition the XY location prior to calling G33.1 and only use a Z word in the G33.1. If the coordinates specified are not the current coordinates when calling G33.1 for tapping the move will not be along the Z axis but will be a coordinated, spindle-synchronized move from the current location to the location specified and back."
+  },
+  "G38.2": {
+   "code": "G38.2",
+   "title": "Probing",
+   "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
+  },
+  "G38.5": {
+   "code": "G38.5",
+   "title": "Probing",
+   "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
+  },
+  "G40": {
+   "code": "G40",
+   "title": "Cancel Cutter Compensation",
+   "docMd": "```ngc\n; current location is X1 after finishing cutter compensated move\nG40 (turn compensation off)\nG0 X1.6 (linear move longer than current cutter diameter)\nM2 (end program)\n```\n\nnext move must be a linear move and longer than the tool diameter. It is OK to turn compensation off when it is already off."
+  },
+  "G41": {
+   "code": "G41",
+   "title": "Cutter Compensation",
+   "docMd": "```ngc\nG41 <D-> (left of programmed path)\nG42 <D-> (right of programmed path)\n```\n\nThe D word is optional; if there is no D word the radius of the currently loaded tool will be used (if no tool is loaded and no D word is given, a radius of 0 will be used)."
+  },
+  "G42": {
+   "code": "G42",
+   "title": "Cutter Compensation",
+   "docMd": "```ngc\nG41 <D-> (left of programmed path)\nG42 <D-> (right of programmed path)\n```\n\nThe D word is optional; if there is no D word the radius of the currently loaded tool will be used (if no tool is loaded and no D word is given, a radius of 0 will be used)."
+  },
+  "G41.1": {
+   "code": "G41.1",
+   "title": "Dynamic Cutter Compensation",
+   "docMd": "```ngc\nG41.1 D- <L-> (left of programmed path)\nG42.1 D- <L-> (right of programmed path)\n```\n\nG41.1 & G42.1 function the same as G41 & G42 with the added scope of being able to program the tool diameter. The L word defaults to 0 if unspecified."
+  },
+  "G42.1": {
+   "code": "G42.1",
+   "title": "Dynamic Cutter Compensation",
+   "docMd": "```ngc\nG41.1 D- <L-> (left of programmed path)\nG42.1 D- <L-> (right of programmed path)\n```\n\nG41.1 & G42.1 function the same as G41 & G42 with the added scope of being able to program the tool diameter. The L word defaults to 0 if unspecified."
+  },
+  "G43": {
+   "code": "G43",
+   "title": "Use Tool Length Offset from Tool Table",
+   "docMd": "```ngc\nG43 <H->\n```\n\nG43 changes subsequent motions by offsetting the axis coordinates by the length of the offset. G43 does not cause any motion. The next time a compensated axis is moved, that axis's endpoint is the compensated location."
+  },
+  "G43.1": {
+   "code": "G43.1",
+   "title": "Dynamic Tool Length Offset",
+   "docMd": "```ngc\nG43.1 axes\n```\n\nG43.1 does not cause any motion. The next time a compensated axis is moved, that axis's endpoint is the compensated location."
+  },
+  "G43.2": {
+   "code": "G43.2",
+   "title": "Apply additional Tool Length Offset",
+   "docMd": "```ngc\nG43.2 H- or axes-\n```\n\nYou can sum together an arbitrary number of offsets by calling G43.2 more times.  There are no built-in assumptions about which numbers are geometry offsets and which are wear offsets, or that you should have only one of each."
+  },
+  "G49": {
+   "code": "G49",
+   "title": "Cancel Tool Length Offset",
+   "docMd": "It is OK to program using the same offset already in use. It is also OK to program using no tool length offset if none is currently being used."
+  },
+  "G52": {
+   "code": "G52",
+   "title": "Local Coordinate System Offset",
+   "docMd": "```ngc\nG52 axes\n```\n\nG52 is used in a part program as a temporary \"local coordinate system offset\" within the workpiece coordinate system. For more information about `G92` and `G52` and how they interact see Local and Global Offsets."
+  },
+  "G53": {
+   "code": "G53",
+   "title": "Move in Machine Coordinates",
+   "docMd": "```ngc\nG53 axes\n```\n\nTo move in the machine coordinate system, program 'G53' on the same line as a linear move. 'G53' is not modal and must be programmed on each line. 'G0' or 'G1' does not have to be programmed on the same line if one is currently active."
+  },
+  "G61": {
+   "code": "G61",
+   "title": "Exact Path Mode",
+   "docMd": "Moves will slow or stop as needed to reach every programmed point. If two sequential moves are exactly co-linear movement will not stop."
+  },
+  "G61.1": {
+   "code": "G61.1",
+   "title": "Exact Stop Mode",
+   "docMd": "programmed segment."
+  },
+  "G64": {
+   "code": "G64",
+   "title": "Path Control Mode with Optional Tolerance",
+   "docMd": "```ngc\nG64 <P- <Q->>\n```\n\npossible, no matter how far away from the programmed point you end up."
+  },
+  "G70": {
+   "code": "G70",
+   "title": "Lathe finishing cycle",
+   "docMd": "```ngc\nG70 Q- <X-> <Z-> <D-> <E-> <P->\n```\n\nThe 'G70' cycle is intended to be used after the shape of the profile given in the subroutine with number Q has been cut with G71 or G72."
+  },
+  "G73": {
+   "code": "G73",
+   "title": "Drilling Cycle with Chip Breaking",
+   "docMd": "```ngc\nG73 X- Y- Z- R- Q- D- <L->\n```\n\nThe 'G73' cycle is drilling or milling with chip breaking. This cycle takes a Q number which represents a 'delta' increment along the Z axis. Peck clearance can be specified by optional D number."
+  },
+  "G74": {
+   "code": "G74",
+   "title": "Left-hand Tapping Cycle with Dwell",
+   "docMd": "```ngc\nG74 (X- Y- Z-) or (U- V- W-) R- L- P- $- F-\n```\n\nSee G81 for examples."
+  },
+  "G76": {
+   "code": "G76",
+   "title": "Multi-pass Threading Cycle (Lathe)",
+   "docMd": "```ngc\nG76 P- Z- I- J- R- K- Q- H- E- L- $-\n```\n\nWhen G7 'Lathe Diameter Mode' is in force the values for 'I', 'J' and 'K' are diameter measurements. When G8 'Lathe Radius Mode' is in force the values for 'I', 'J' and 'K' are radius measurements."
+  },
+  "G80": {
+   "code": "G80",
+   "title": "Cancel Motion Modes",
+   "docMd": "```ngc\nG90 G81 X1 Y1 Z1.5 R2.8 (absolute distance canned cycle)\nG80 (turn off canned cycle motion)\nG0 X0 Y0 Z0 (rapid move to coordinate home)\n```\n\nso programming any other G-code from modal group 1 will also cancel the canned cycle."
+  },
+  "G81": {
+   "code": "G81",
+   "title": "Drilling Cycle",
+   "docMd": "```ngc\nG81 (X- Y- Z-) or (U- V- W-) R- L-\n```\n\nThe 'G81' cycle is intended for drilling."
+  },
+  "G82": {
+   "code": "G82",
+   "title": "Drilling Cycle with Dwell",
+   "docMd": "```ngc\nG82 (X- Y- Z-) or (U- V- W-) R- L- P-\n```\n\nThe 'G82' cycle is intended for drilling with a dwell at the bottom of the hole."
+  },
+  "G83": {
+   "code": "G83",
+   "title": "Drilling Cycle with Peck",
+   "docMd": "```ngc\nG83 (X- Y- Z-) or (U- V- W-) R- L- Q- D-\n```\n\nThe 'G83' cycle (often called peck drilling) is intended for deep drilling or milling with chip breaking. The retracts in this cycle clear the hole of chips and cut off any long stringers (which are common when drilling in aluminum). This cycle takes a Q number which represents a 'delta' increment along the Z-axis. The retract before final depth will always be to the 'retract' plane even if G98 is in effect. The final retract will honor the G98/99 in effect. G83 functions the same as G81 with the addition of retracts during the drilling operation. Peck clearance can be specified by optional D number."
+  },
+  "G84": {
+   "code": "G84",
+   "title": "Right-hand Tapping Cycle with Dwell",
+   "docMd": "```ngc\nG84 (X- Y- Z-) or (U- V- W-) R- L- P- $- F-\n```\n\nSee G81 for examples."
+  },
+  "G85": {
+   "code": "G85",
+   "title": "Boring Cycle, No Dwell, Feed Out",
+   "docMd": "```ngc\nG85 (X- Y- Z-) or (U- V- W-) R- L-\n```\n\nThe 'G85' cycle is intended for boring or reaming, but could be used for drilling or milling."
+  },
+  "G86": {
+   "code": "G86",
+   "title": "Boring Cycle, Stop, Rapid Out",
+   "docMd": "```ngc\nG86 (X- Y- Z-) or (U- V- W-) R- L- P- $-\n```\n\nThe 'G86' cycle is intended for boring. This cycle uses a P number for the number of seconds to dwell."
+  },
+  "G87": {
+   "code": "G87",
+   "title": "Back-boring Cycle _(not yet implemented)_",
+   "docMd": "This code is currently unimplemented in LinuxCNC. It is accepted, but the behavior is undefined."
+  },
+  "G88": {
+   "code": "G88",
+   "title": "Boring Cycle, Stop, Manual Out _(not yet implemented)_",
+   "docMd": "This code is currently unimplemented in LinuxCNC. It is accepted, but the behavior is undefined."
+  },
+  "G89": {
+   "code": "G89",
+   "title": "Boring Cycle, Dwell, Feed Out",
+   "docMd": "```ngc\nG89 (X- Y- Z-) or (U- V- W-) R- L- P-\n```\n\nThe 'G89' cycle is intended for boring. This cycle uses a P number, where P specifies the number of seconds to dwell."
+  },
+  "G90": {
+   "code": "G90",
+   "title": "Distance Mode",
+   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n(X, Y, Z, A, B, C, U, V, W) usually represent positions in terms of the currently active coordinate system. Any exceptions to that rule are described explicitly in the G80 G89 section."
+  },
+  "G91": {
+   "code": "G91",
+   "title": "Distance Mode",
+   "docMd": "```ngc\nG90 (set absolute distance mode)\nG0 X2.5 (rapid move to coordinate X2.5 including any offsets in effect)\n```\n\n(X, Y, Z, A, B, C, U, V, W) usually represent positions in terms of the currently active coordinate system. Any exceptions to that rule are described explicitly in the G80 G89 section."
+  },
+  "G90.1": {
+   "code": "G90.1",
+   "title": "Arc Distance Mode",
+   "docMd": "When G90.1 is in effect I and J both must be specified with G2/3 for the XY plane or J and K for the XZ plane or it is an error."
+  },
+  "G91.1": {
+   "code": "G91.1",
+   "title": "Arc Distance Mode",
+   "docMd": "When G90.1 is in effect I and J both must be specified with G2/3 for the XY plane or J and K for the XZ plane or it is an error."
+  },
+  "G92": {
+   "code": "G92",
+   "title": "Coordinate System Offset",
+   "docMd": "```ngc\nG92 axes\n```\n\nOnly use 'G92' after your machine has been positioned to the desired point."
+  },
+  "G92.1": {
+   "code": "G92.1",
+   "title": "Cancel G92 Offsets",
+   "docMd": "G92.1 only clears G92 offsets, to change G53-G59.3 coordinate system offsets in G-code use either G10 L2 or G10 L20."
+  },
+  "G92.2": {
+   "code": "G92.2",
+   "title": "Cancel G92 Offsets",
+   "docMd": "G92.1 only clears G92 offsets, to change G53-G59.3 coordinate system offsets in G-code use either G10 L2 or G10 L20."
+  },
+  "G92.3": {
+   "code": "G92.3",
+   "title": "Restore G92 Offsets",
+   "docMd": "You can set axis offsets in one program and use the same offsets in another program. Program `G92` in the first program. This will set parameters 5211 to 5219. Do not use `G92.1` in the remainder of the first program. The parameter values will be saved when the first program exits and restored when the second one starts up. Use `G92.3` near the beginning of the second program. That will restore the offsets saved in the first program."
+  },
+  "G93": {
+   "code": "G93",
+   "title": "Feed Modes",
+   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+  },
+  "G94": {
+   "code": "G94",
+   "title": "Feed Modes",
+   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+  },
+  "G95": {
+   "code": "G95",
+   "title": "Feed Modes",
+   "docMd": "In inverse time feed rate mode, an F word means the move should be completed in [one divided by the F number] minutes. For example, if the F number is 2.0, the move should be completed in half a minute. + When the inverse time feed rate mode is active, an F word must appear on every line which has a `G1`, `G2`, or `G3` motion, and an F-word on a line that does not have `G1`, `G2`, or `G3` is ignored. Being in inverse time feed rate mode does not affect `G0` (rapid move) motions."
+  },
+  "G96": {
+   "code": "G96",
+   "title": "Spindle Control Mode, Constant Surface vs Rotation Speed (IPM or m/min vs RPM)",
+   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\nWhen using G96, ensure that X0 in the current coordinate system (including offsets and tool lengths) is the center of rotation or LinuxCNC will not give the desired surface speed. G96 is not affected by radius or diameter mode."
+  },
+  "G97": {
+   "code": "G97",
+   "title": "Spindle Control Mode, Constant Surface vs Rotation Speed (IPM or m/min vs RPM)",
+   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\nWhen using G96, ensure that X0 in the current coordinate system (including offsets and tool lengths) is the center of rotation or LinuxCNC will not give the desired surface speed. G96 is not affected by radius or diameter mode."
+  },
+  "G98": {
+   "code": "G98",
+   "title": "Canned Cycle Z Retract Mode",
+   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\nWhen spindle retracts during canned cycles, there are two options to choose from for the way it does it:"
+  },
+  "G99": {
+   "code": "G99",
+   "title": "Canned Cycle Z Retract Mode",
+   "docMd": "```ngc\nG0 X1 Y2 Z3\nG90 G98 G81 X4 Y5 Z-0.6 R1.8 F10\n```\n\nWhen spindle retracts during canned cycles, there are two options to choose from for the way it does it:"
+  },
+  "G38": {
+   "code": "G38",
+   "title": "._n_ Straight Probe",
+   "docMd": "```ngc\nG38.n axes\n```\n\nfailure"
+  },
+  "G54": {
+   "code": "G54",
+   "title": "-G59.3 Select Coordinate System",
+   "docMd": "The coordinate systems store the axis values and the XY rotation angle around the Z axis in the parameters shown in the following table."
+  },
+  "G59.3": {
+   "code": "G59.3",
+   "title": "-G59.3 Select Coordinate System",
+   "docMd": "The coordinate systems store the axis values and the XY rotation angle around the Z axis in the parameters shown in the following table."
+  },
+  "G71": {
+   "code": "G71",
+   "title": "Lathe roughing cycles",
+   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
+  },
+  "G72": {
+   "code": "G72",
+   "title": "Lathe roughing cycles",
+   "docMd": "```ngc\nG71   Q- <X-> <Z-> <D-> <I-> <R->\nG71.1 Q- <X-> <Z-> <D-> <I-> <R->\nG71.2 Q- <X-> <Z-> <D-> <I-> <R->\nG72   Q- <X-> <Z-> <D-> <I-> <R->\nG72.1 Q- <X-> <Z-> <D-> <I-> <R->\nG72.2 Q- <X-> <Z-> <D-> <I-> <R->\n```\n\nThe G71 and G72 cycles are currently somewhat fragile. See issue [#2939](https://github.com/LinuxCNC/linuxcnc/issues/2939) for example."
+  },
+  "M0": {
+   "code": "M0",
+   "title": "Program Pause",
+   "docMd": ""
+  },
+  "M1": {
+   "code": "M1",
+   "title": "Program Pause",
+   "docMd": ""
+  },
+  "M2": {
+   "code": "M2",
+   "title": "Program End",
+   "docMd": ""
+  },
+  "M30": {
+   "code": "M30",
+   "title": "Program End",
+   "docMd": ""
+  },
+  "M60": {
+   "code": "M60",
+   "title": "Pallet Change Pause",
+   "docMd": ""
+  },
+  "M3": {
+   "code": "M3",
+   "title": "Spindle Control",
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+  },
+  "M4": {
+   "code": "M4",
+   "title": "Spindle Control",
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+  },
+  "M5": {
+   "code": "M5",
+   "title": "Spindle Control",
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```"
+  },
+  "M6": {
+   "code": "M6",
+   "title": "Tool Change",
+   "docMd": "If the HAL component 'hal_manualtoolchange' is loaded, M6 will stop the spindle and prompt the user to change the tool based on the last 'T-' number programmed. For more information on hal_manualtoolchange see the Manual Tool Change section."
+  },
+  "M7": {
+   "code": "M7",
+   "title": "Coolant Control",
+   "docMd": ""
+  },
+  "M8": {
+   "code": "M8",
+   "title": "Coolant Control",
+   "docMd": ""
+  },
+  "M9": {
+   "code": "M9",
+   "title": "Coolant Control",
+   "docMd": ""
+  },
+  "M19": {
+   "code": "M19",
+   "title": "Orient Spindle",
+   "docMd": "```ngc\nM19 R- Q- [P-] [$-]\n```"
+  },
+  "M48": {
+   "code": "M48",
+   "title": "Feed & Spindle Overrides Enable/Disable",
+   "docMd": ""
+  },
+  "M49": {
+   "code": "M49",
+   "title": "Feed & Spindle Overrides Enable/Disable",
+   "docMd": ""
+  },
+  "M50": {
+   "code": "M50",
+   "title": "Feed Override Control",
+   "docMd": ""
+  },
+  "M51": {
+   "code": "M51",
+   "title": "Spindle Override Control",
+   "docMd": ""
+  },
+  "M52": {
+   "code": "M52",
+   "title": "Adaptive Feed Control",
+   "docMd": ""
+  },
+  "M53": {
+   "code": "M53",
+   "title": "Feed Stop Control",
+   "docMd": ""
+  },
+  "M61": {
+   "code": "M61",
+   "title": "Set Current Tool Number",
+   "docMd": ""
+  },
+  "M66": {
+   "code": "M66",
+   "title": "Input Control",
+   "docMd": "```ngc\nM66 P- | E- <L->\n```"
+  },
+  "M67": {
+   "code": "M67",
+   "title": "Analog Output Control",
+   "docMd": "```ngc\nM67 E- Q-\n```"
+  },
+  "M68": {
+   "code": "M68",
+   "title": "Analog Output Control",
+   "docMd": "```ngc\nM68 E- Q-\n```"
+  },
+  "M70": {
+   "code": "M70",
+   "title": "Save Modal State",
+   "docMd": "To explicitly save the modal state at the current call level, program 'M70'. Once modal state has been saved with 'M70', it can be restored to exactly that state by executing an 'M72'."
+  },
+  "M71": {
+   "code": "M71",
+   "title": "Invalidate Stored Modal State",
+   "docMd": "Modal state saved with an 'M70' or by an 'M73' at the current call level is invalidated (cannot be restored from anymore)."
+  },
+  "M72": {
+   "code": "M72",
+   "title": "Restore Modal State",
+   "docMd": "```ngc\nO<showstate> sub\n(DEBUG, imperial=#<_imperial> absolute=#<_absolute> feed=#<_feed> rpm=#<_rpm>)\nO<showstate> endsub\n\nO<imperialsub> sub\ng20 (imperial)\ng91 (relative mode)\nF5 (low feed)\nS300 (low rpm)\n(debug, in subroutine, state now:)\no<showstate> call\nO<imperialsub> endsub\n\n; main program\ng21 (metric)\ng90 (absolute)\nf200 (fast speed)\nS2500 (high rpm)\n\n(debug, in main, state now:)\no<showstate> call\n\nM70 (save caller state in at global level)\nO<imperialsub> call\nM72 (explicitly restore state)\n\n(debug, back in main, state now:)\no<showstate> call\nm2\n```\n\nModal state saved with an 'M70' code can be restored by executing an 'M72'."
+  },
+  "M73": {
+   "code": "M73",
+   "title": "Save Autorestore Modal State",
+   "docMd": "```ngc\nO<showstate> sub\n(DEBUG, imperial=#<_imperial> absolute=#<_absolute> feed=#<_feed> rpm=#<_rpm>)\nO<showstate> endsub\n\nO<imperialsub> sub\nM73 (save caller state in current call context, restore on return or endsub)\ng20 (imperial)\ng91 (relative mode)\nF5 (low feed)\nS300 (low rpm)\n(debug, in subroutine, state now:)\no<showstate> call\n\n; note - no M72 is needed here - the following endsub or an\n; explicit 'return' will restore caller state\nO<imperialsub> endsub\n\n; main program\ng21 (metric)\ng90 (absolute)\nf200 (fast speed)\nS2500 (high rpm)\n(debug, in main, state now:)\no<showstate> call\no<imperialsub> call\n(debug, back in main, state now:)\no<showstate> call\nm2\n```\n\nTo save modal state within a subroutine, and restore state on subroutine 'endsub' or any 'return' path, program 'M73'."
+  },
+  "M98": {
+   "code": "M98",
+   "title": "Call and Return From Subprogram",
+   "docMd": "```ngc\nO<measure> sub   (measure reference tool)\n;\n#<absolute> = #<_absolute>  (remember in local variable if G90 was set)\n;\ng30 (above switch)\ng38.2 z0 f15 (measure)\ng91 g0z.2 (off the switch)\n#1000=#5063 (save reference tool length)\n(print,reference length is #1000)\n;\nO<restore_abs> if [#<absolute>]\n    g90 (restore G90 only if it was set on entry:)\nO<restore_abs> endif\n;\nO<measure> endsub\n```\n\nThe interpreter supports Fanuc-style main- and sub-programs with the 'M98' and 'M99' M-codes. See Fanuc-Style Programs."
+  },
+  "M99": {
+   "code": "M99",
+   "title": "Call and Return From Subprogram",
+   "docMd": "```ngc\nO<measure> sub   (measure reference tool)\n;\n#<absolute> = #<_absolute>  (remember in local variable if G90 was set)\n;\ng30 (above switch)\ng38.2 z0 f15 (measure)\ng91 g0z.2 (off the switch)\n#1000=#5063 (save reference tool length)\n(print,reference length is #1000)\n;\nO<restore_abs> if [#<absolute>]\n    g90 (restore G90 only if it was set on entry:)\nO<restore_abs> endif\n;\nO<measure> endsub\n```\n\nThe interpreter supports Fanuc-style main- and sub-programs with the 'M98' and 'M99' M-codes. See Fanuc-Style Programs."
+  },
+  "M62": {
+   "code": "M62",
+   "title": "- M65 Digital Output Control",
+   "docMd": ""
+  },
+  "M65": {
+   "code": "M65",
+   "title": "- M65 Digital Output Control",
+   "docMd": ""
+  },
+  "M100": {
+   "code": "M100",
+   "title": "-M199 User Defined Commands",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "M199": {
+   "code": "M199",
+   "title": "-M199 User Defined Commands",
+   "docMd": "```ngc\nM1-- <P- Q->\n```"
+  },
+  "F": {
+   "code": "F",
+   "title": "Set Feed Rate",
+   "docMd": "'Fx' - set the feed rate to 'x'.  'x' is usually in machine units (inches or millimeters) per minute."
+  },
+  "S": {
+   "code": "S",
+   "title": "Set Spindle Speed",
+   "docMd": "'Sx [$n]' - set the speed of the spindle to 'x' revolutions per minute (RPM) with the optional $ set the spindle speed for a specific spindle. Without the $ the command will default to spindle.0."
+  },
+  "T": {
+   "code": "T",
+   "title": "Select Tool",
+   "docMd": "'Tx' - prepare to change to tool 'x'."
+  }
+ },
  "commands": {
   "loadrt": {
    "name": "loadrt",
