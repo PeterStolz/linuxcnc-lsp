@@ -9,7 +9,7 @@ import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@l
 import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
   definition, references, documentHighlights, MachineModel, iniRefsTo,
-  completeHal, completeIni,
+  completeHal, completeIni, prepareRename, rename,
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
@@ -72,6 +72,7 @@ connection.onInitialize((params): InitializeResult => {
         triggerCharacters: ['[', ']', '.', '=', '$', ' '],
         resolveProvider: false,
       },
+      renameProvider: { prepareProvider: true },
       semanticTokensProvider: {
         legend: { tokenTypes: [...SEMANTIC_TOKEN_TYPES], tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS] },
         full: true,
@@ -295,6 +296,29 @@ connection.onCompletion((params): CompletionItem[] => {
     return completeIni({ ini: model.ini, lineIndex: model.lineIndex, text: model.text, offset, index: metadata });
   }
   return [];
+});
+
+/** Build the machine model relevant to a document (HAL owner or the INI itself). */
+function modelForUri(uri: string): MachineModel | undefined {
+  if (!metadata) return undefined;
+  if (uri.toLowerCase().endsWith('.ini')) return project.buildModel(uri, metadata);
+  return modelForHal(uri);
+}
+
+connection.onPrepareRename((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const model = modelForUri(doc.uri);
+  if (!model) return null;
+  return prepareRename(model, doc.uri, doc.offsetAt(params.position));
+});
+
+connection.onRenameRequest((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const model = modelForUri(doc.uri);
+  if (!model) return null;
+  return rename(model, doc.uri, doc.offsetAt(params.position), params.newName);
 });
 
 connection.languages.semanticTokens.on((params) => {
