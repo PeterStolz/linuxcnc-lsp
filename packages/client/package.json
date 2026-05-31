@@ -1,6 +1,6 @@
 {
   "name": "linuxcnc-lsp",
-  "displayName": "LinuxCNC",
+  "displayName": "LinuxCNC LSP",
   "description": "Language support for LinuxCNC HAL, INI and G-code files",
   "version": "0.1.0",
   "publisher": "linuxcnc-community",
