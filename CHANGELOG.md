@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.2](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.1...v0.1.2) (2026-05-31)
+
+
+### Features
+
+* **client:** add extension icon (LinuxCNC logo + LSP badge) ([7fe0c3d](https://github.com/PeterStolz/linuxcnc-lsp/commit/7fe0c3d1bc5e3abc41ed3d2e2e0637f96347885f))
+
+
+### Bug Fixes
+
+* 13 round-2 fuzz bugs (mostly adjacent edges of the round-1 fixes) ([c8378e4](https://github.com/PeterStolz/linuxcnc-lsp/commit/c8378e47ad32f2f7d8d575641686868b581dfe1a))
+* 8 accuracy bugs from the full machine audit (247 configs) ([ef124d7](https://github.com/PeterStolz/linuxcnc-lsp/commit/ef124d7a69e2f114dad6e1ca2a4501ed4d5dc519))
+* **release:** point Marketplace publish at VSCD_PAT secret; add manual re-publish dispatch ([eaf91a6](https://github.com/PeterStolz/linuxcnc-lsp/commit/eaf91a6b1991d778ff89efff0c8c46dbdb0d4d63))
+
 ## [0.1.1](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.0...v0.1.1) (2026-05-31)
 
 
