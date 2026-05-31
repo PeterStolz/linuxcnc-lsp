@@ -75,17 +75,18 @@ Motion makes "as you type" obvious. If you ship the GIF, still keep the PNG as f
 ## 3. `gcode-subroutines.png` — REQUIRED (the newest differentiator)
 
 **Question answered:** "Is the G-code support real, or just colors?"
-**Scene:** `nc_files/facing.ngc` with the **Outline** view open (Explorer sidebar,
-Outline section) and the editor showing the `o<probe> call` / `o<rough> repeat` blocks.
+**Captured scene (current image):** `nc_files/subs/probe.ngc` showing the
+`o<probe> sub` / `o100 if … endif` / `o<probe> endsub` structure, with a hover
+tooltip on `G38.2` rendering its "Probing" doc. This proves O-word structure
+parsing + hover docs in one shot.
 
-- Expand the Outline so `o<probe>` (from the called file) and the structure show.
-- Put the cursor on `o<probe> call`; if you can capture the go-to-definition peek
-  (Alt/Cmd-click → inline peek into `subs/probe.ngc`), even better — that proves
-  *cross-file* subroutine resolution in one image.
-- Show the folding chevrons in the gutter next to `o<rough> repeat`.
+**Optional upgrade (not yet captured):** open `nc_files/facing.ngc` with the
+**Outline** view (Explorer → Outline) showing `o<probe>`/`o<rough>`, and Alt/Cmd-click
+`o<probe> call` to peek into `subs/probe.ngc` — that would additionally prove
+*cross-file* resolution. If you capture it, update the caption/alt below to match.
 
-**Caption:** *G-code O-word subroutines: outline, cross-file go-to-definition, folding, formatting, and structural checks.*
-**Alt text:** `A G-code file with an outline of its subroutines and a peek into a subroutine defined in another file.`
+**Caption:** *O-word subroutines with full control-flow structure, plus hover docs for every G/M-code — and go-to-definition, folding, formatting, and structural checks on top.*
+**Alt text:** `A G-code subroutine file showing O-word sub / if / endif structure with a hover tooltip documenting the G38.2 probe word.`
 
 ---
 

@@ -48,6 +48,10 @@ That's it — there's nothing to configure for a single-machine workspace. (Got 
 - Hover any key for docs; homing keys link straight to the LinuxCNC manual.
 - Hover an INI key to see whether any HAL file references it.
 
+![Editor hover tooltip showing LinuxCNC documentation for an INI key.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/hover-docs.png)
+
+*Hover any component, pin, INI key, or G/M-code for docs pulled straight from the LinuxCNC source.*
+
 > `.ini` files are recognized **by content**, not just by extension, so the
 > extension never touches your unrelated `.ini` files. See
 > [Privacy and offline](#privacy-and-offline).
@@ -65,13 +69,9 @@ That's it — there's nothing to configure for a single-machine workspace. (Got 
 - Structural diagnostics: unmatched / unclosed / mismatched O-words, duplicate or
   nested subroutines, and misplaced `return`/`break`/`continue`.
 
-![Editor hover tooltip showing LinuxCNC documentation for a G-code word.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/hover-docs.png)
+![A G-code subroutine file showing O-word sub / if / endif structure with a hover tooltip documenting the G38.2 probe word.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/gcode-subroutines.png)
 
-*Hover any component, pin, INI key, or G/M-code for docs pulled straight from the LinuxCNC source.*
-
-![A G-code file with an outline of its subroutines and a peek into a subroutine defined in another file.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/gcode-subroutines.png)
-
-*G-code O-word subroutines: outline, cross-file go-to-definition, folding, formatting, and structural checks.*
+*O-word subroutines with full control-flow structure, plus hover docs for every G/M-code — and go-to-definition, folding, formatting, and structural checks on top.*
 
 The G-code dialect is **LinuxCNC RS274NGC**. The hover docs and the O-word checks
 assume that dialect; if you mainly write Grbl, Fanuc, or Marlin G-code, a generic
