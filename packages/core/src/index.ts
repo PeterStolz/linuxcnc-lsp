@@ -19,7 +19,7 @@ export * from './ini/ast';
 // Diagnostics
 export { RULES, RuleId, resolveSeverity, SeverityName } from './diagnostics/rules';
 export {
-  Diagnostic, DiagnosticSink, DiagnosticSinkOptions, SuppressionIndex, DIAGNOSTIC_SOURCE,
+  Diagnostic, DiagnosticSeverity, DiagnosticSink, DiagnosticSinkOptions, SuppressionIndex, DIAGNOSTIC_SOURCE,
 } from './diagnostics/types';
 export { diagnoseHalIntraFile } from './diagnostics/hal';
 export { diagnoseIniIntraFile } from './diagnostics/ini';

@@ -11,6 +11,14 @@ import { DocumentSymbol, FoldingRange } from 'vscode-languageserver';
 
 export type DocKind = 'hal' | 'ini' | 'gcode';
 
+export function docKindFromUri(uri: string): DocKind | undefined {
+  const u = uri.toLowerCase();
+  if (u.endsWith('.hal')) return 'hal';
+  if (u.endsWith('.ini')) return 'ini';
+  if (u.endsWith('.ngc') || u.endsWith('.nc') || u.endsWith('.gcode')) return 'gcode';
+  return undefined;
+}
+
 export function docKind(doc: TextDocument): DocKind | undefined {
   switch (doc.languageId) {
     case 'hal':
@@ -20,13 +28,18 @@ export function docKind(doc: TextDocument): DocKind | undefined {
     case 'gcode':
       return 'gcode';
     default:
-      break;
+      return docKindFromUri(doc.uri);
   }
-  const uri = doc.uri.toLowerCase();
-  if (uri.endsWith('.hal')) return 'hal';
-  if (uri.endsWith('.ini')) return 'ini';
-  if (uri.endsWith('.ngc') || uri.endsWith('.nc') || uri.endsWith('.gcode')) return 'gcode';
-  return undefined;
+}
+
+/** Build a DocModel directly from text + URI (for non-open sibling files). */
+export function buildDocModelFromText(uri: string, text: string): DocModel {
+  const lineIndex = new LineIndex(text);
+  const kind = docKindFromUri(uri);
+  const model: DocModel = { kind, text, lineIndex };
+  if (kind === 'hal') model.hal = parseHal(text);
+  else if (kind === 'ini') model.ini = parseIni(text);
+  return model;
 }
 
 export interface AnalysisOptions {

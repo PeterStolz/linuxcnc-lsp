@@ -1,16 +1,20 @@
 import {
   createConnection, ProposedFeatures, TextDocuments, TextDocumentSyncKind,
-  InitializeResult, SemanticTokensBuilder, DidChangeConfigurationNotification,
+  InitializeResult, SemanticTokensBuilder, DidChangeConfigurationNotification, Diagnostic,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
 import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@linuxcnc/core';
-import { MetadataIndex, hoverHal, hoverIni } from '@linuxcnc/metadata';
 import {
-  buildDocModel, computeDiagnostics, computeSemanticTokens,
+  MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
+  definition, references, documentHighlights, MachineModel,
+} from '@linuxcnc/metadata';
+import {
+  buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
   computeDocumentSymbols, computeFoldingRanges, DocModel,
 } from './analysis';
 import { loadMetadata, scanWorkspaceComps } from './metadata';
+import { Project } from './project';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -21,14 +25,19 @@ interface Settings {
   diagnosticsEnabled: boolean;
   overrides: Record<string, SeverityName>;
   metadataPath?: string;
+  libDir?: string;
 }
 let settings: Settings = { diagnosticsEnabled: true, overrides: {} };
 
 let metadata: MetadataIndex | undefined;
 let workspaceRoots: string[] = [];
+let project: Project;
 
-// Cache parsed models by uri+version to avoid re-parsing for every request.
 const modelCache = new Map<string, { version: number; model: DocModel }>();
+
+function getText(uri: string): string | undefined {
+  return documents.get(uri)?.getText();
+}
 
 function getModel(doc: TextDocument): DocModel {
   const cached = modelCache.get(doc.uri);
@@ -47,17 +56,18 @@ connection.onInitialize((params): InitializeResult => {
     const r = uriToPath(params.rootUri);
     if (r && !workspaceRoots.includes(r)) workspaceRoots.push(r);
   }
+  project = new Project(getText, () => settings.libDir);
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       hoverProvider: true,
+      definitionProvider: true,
+      referencesProvider: true,
+      documentHighlightProvider: true,
       documentSymbolProvider: true,
       foldingRangeProvider: true,
       semanticTokensProvider: {
-        legend: {
-          tokenTypes: [...SEMANTIC_TOKEN_TYPES],
-          tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS],
-        },
+        legend: { tokenTypes: [...SEMANTIC_TOKEN_TYPES], tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS] },
         full: true,
       },
     },
@@ -70,6 +80,11 @@ connection.onInitialized(() => {
     void refreshSettings();
   }
   loadMetadataAndOverlay();
+  try {
+    project.scanRoots(workspaceRoots);
+  } catch {
+    /* ignore scan errors */
+  }
 });
 
 function loadMetadataAndOverlay(): void {
@@ -77,60 +92,134 @@ function loadMetadataAndOverlay(): void {
   if (metadata && workspaceRoots.length) {
     try {
       const custom = scanWorkspaceComps(workspaceRoots);
-      if (custom.length) {
-        metadata.setOverlay(custom);
-        connection.console.info(`linuxcnc: loaded ${custom.length} workspace .comp component(s)`);
-      }
+      if (custom.length) metadata.setOverlay(custom);
     } catch {
-      /* ignore overlay scan errors */
+      /* ignore */
     }
   }
-  if (!metadata) connection.console.warn('linuxcnc: metadata DB not found; hover/completion disabled');
 }
 
-function uriToPath(uri: string): string | undefined {
+async function refreshSettings(): Promise<void> {
+  if (hasConfigCapability) {
+    try {
+      const cfg = await connection.workspace.getConfiguration('linuxcnc');
+      settings = {
+        diagnosticsEnabled: cfg?.diagnostics?.enable !== false,
+        overrides: (cfg?.diagnostics?.rules ?? {}) as Record<string, SeverityName>,
+        metadataPath: cfg?.metadata?.path || undefined,
+        libDir: cfg?.libDir || undefined,
+      };
+    } catch {
+      /* keep defaults */
+    }
+  }
+  for (const doc of documents.all()) onDocChanged(doc.uri);
+}
+
+connection.onDidChangeConfiguration(() => void refreshSettings());
+
+// --- Validation: merge intra-file + cross-file diagnostics ---------------
+
+function intraDiagnostics(uri: string): Diagnostic[] {
+  const open = documents.get(uri);
+  const model = open ? getModel(open) : tryBuildFromFs(uri);
+  if (!model) return [];
+  return computeDiagnostics(model, { overrides: settings.overrides, diagnosticsEnabled: settings.diagnosticsEnabled });
+}
+
+function tryBuildFromFs(uri: string): DocModel | undefined {
   try {
-    return URI.parse(uri).fsPath;
+    const fs = require('fs') as typeof import('fs');
+    const text = fs.readFileSync(URI.parse(uri).fsPath, 'utf8');
+    return buildDocModelFromText(uri, text);
   } catch {
     return undefined;
   }
 }
 
-async function refreshSettings(): Promise<void> {
-  if (!hasConfigCapability) return;
-  try {
-    const cfg = await connection.workspace.getConfiguration('linuxcnc');
-    settings = {
-      diagnosticsEnabled: cfg?.diagnostics?.enable !== false,
-      overrides: (cfg?.diagnostics?.rules ?? {}) as Record<string, SeverityName>,
-      metadataPath: cfg?.metadata?.path || undefined,
-    };
-  } catch {
-    // keep defaults
-  }
-  // Re-validate all open documents with the new settings.
-  for (const doc of documents.all()) validate(doc);
-}
-
-connection.onDidChangeConfiguration(() => {
-  void refreshSettings();
-});
-
-function validate(doc: TextDocument): void {
-  const model = getModel(doc);
-  const diagnostics = computeDiagnostics(model, {
-    overrides: settings.overrides,
-    diagnosticsEnabled: settings.diagnosticsEnabled,
+/** Build the machine model owning `halUri` (first owner), or a standalone
+ *  single-file model for an orphan HAL file. */
+function modelForHal(uri: string): MachineModel | undefined {
+  if (!metadata) return undefined;
+  const machines = project.machinesForHal(uri);
+  if (machines.length) return project.buildModel(machines[0], metadata);
+  const doc = documents.get(uri);
+  const model = doc ? getModel(doc) : tryBuildFromFs(uri);
+  if (!model?.hal) return undefined;
+  return buildMachineModel({
+    files: [{ uri, text: model.text, lineIndex: model.lineIndex, hal: model.hal, phase: 'pre', order: 0 }],
+    index: metadata,
   });
-  connection.sendDiagnostics({ uri: doc.uri, diagnostics });
 }
 
-documents.onDidChangeContent((e) => validate(e.document));
+function publish(uri: string, diagnostics: Diagnostic[]): void {
+  connection.sendDiagnostics({ uri, diagnostics });
+}
 
+function crossForMachine(iniUri: string): Map<string, Diagnostic[]> {
+  if (!metadata) return new Map();
+  const model = project.buildModel(iniUri, metadata);
+  if (!model) return new Map();
+  return crossFileDiagnostics(model, metadata, { overrides: settings.overrides });
+}
+
+/** Recompute and publish diagnostics for a single URI (intra + any cross). */
+function publishUri(uri: string, crossByUri?: Map<string, Diagnostic[]>): void {
+  if (settings.diagnosticsEnabled === false) {
+    publish(uri, []);
+    return;
+  }
+  const intra = intraDiagnostics(uri);
+  let cross: Diagnostic[] = [];
+  if (crossByUri) {
+    cross = crossByUri.get(uri) ?? [];
+  } else if (uri.toLowerCase().endsWith('.hal') && metadata) {
+    const machines = project.machinesForHal(uri);
+    if (machines.length) cross = crossForMachine(machines[0]).get(uri) ?? [];
+  }
+  publish(uri, [...intra, ...cross]);
+}
+
+/** Top-level: a document changed; revalidate it and any machine siblings. */
+function onDocChanged(uri: string): void {
+  const lower = uri.toLowerCase();
+  if (lower.endsWith('.ini')) {
+    project.indexIni(uri);
+    publishUri(uri); // INI intra diagnostics
+    const cross = crossForMachine(uri);
+    const halUris = new Set<string>([...cross.keys()]);
+    for (const h of halUris) publishUri(h, cross);
+    return;
+  }
+  if (lower.endsWith('.hal')) {
+    const machines = project.machinesForHal(uri);
+    if (machines.length && metadata) {
+      const seen = new Set<string>();
+      for (const ini of machines) {
+        const cross = crossForMachine(ini);
+        for (const h of cross.keys()) {
+          if (seen.has(h)) continue;
+          seen.add(h);
+          publishUri(h, cross);
+        }
+      }
+      if (!seen.has(uri)) publishUri(uri);
+    } else {
+      publishUri(uri);
+    }
+    return;
+  }
+  publishUri(uri); // gcode etc. -> intra only (none yet)
+}
+
+documents.onDidChangeContent((e) => onDocChanged(e.document.uri));
+documents.onDidOpen((e) => onDocChanged(e.document.uri));
 documents.onDidClose((e) => {
   modelCache.delete(e.document.uri);
-  connection.sendDiagnostics({ uri: e.document.uri, diagnostics: [] });
+  publish(e.document.uri, []);
 });
+
+// --- Language feature handlers -------------------------------------------
 
 connection.onHover((params) => {
   if (!metadata) return null;
@@ -143,16 +232,41 @@ connection.onHover((params) => {
   return null;
 });
 
+connection.onDefinition((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const offset = doc.offsetAt(params.position);
+  const model = modelForHal(doc.uri);
+  if (!model) return null;
+  return definition(model, doc.uri, offset);
+});
+
+connection.onReferences((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const offset = doc.offsetAt(params.position);
+  const model = modelForHal(doc.uri);
+  if (!model) return null;
+  return references(model, doc.uri, offset, params.context?.includeDeclaration ?? true);
+});
+
+connection.onDocumentHighlight((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const offset = doc.offsetAt(params.position);
+  const model = modelForHal(doc.uri);
+  if (!model) return null;
+  return documentHighlights(model, doc.uri, offset);
+});
+
 connection.onDocumentSymbol((params) => {
   const doc = documents.get(params.textDocument.uri);
-  if (!doc) return [];
-  return computeDocumentSymbols(getModel(doc));
+  return doc ? computeDocumentSymbols(getModel(doc)) : [];
 });
 
 connection.onFoldingRanges((params) => {
   const doc = documents.get(params.textDocument.uri);
-  if (!doc) return [];
-  return computeFoldingRanges(getModel(doc));
+  return doc ? computeFoldingRanges(getModel(doc)) : [];
 });
 
 connection.languages.semanticTokens.on((params) => {
@@ -164,6 +278,14 @@ connection.languages.semanticTokens.on((params) => {
   }
   return builder.build();
 });
+
+function uriToPath(uri: string): string | undefined {
+  try {
+    return URI.parse(uri).fsPath;
+  } catch {
+    return undefined;
+  }
+}
 
 documents.listen(connection);
 connection.listen();

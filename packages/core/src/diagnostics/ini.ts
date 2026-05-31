@@ -42,12 +42,29 @@ const REPEATABLE_KEYS = new Set([
   'button',             // xhc-hb04.cc:680 indexed loop (pendant config sections)
 ]);
 
-/** True if `lc` (a lowercased key name) is a repeatable INI key. Covers the
- *  fixed set above plus the dynamic [DISPLAY] multi-message family
- *  (MULTIMESSAGE_ID and MULTIMESSAGE_<id>_TEXT/TYPE/... where <id> is
- *  user-chosen), read via findall in iniinfo.py:439-455. */
-function isRepeatableKey(lc: string): boolean {
-  return REPEATABLE_KEYS.has(lc) || lc.startsWith('multimessage_');
+/** Section-scoped repeatable keys, as `${section}|${key}` (both lowercased).
+ *  Used when a key is repeatable only inside one specific section and the key
+ *  name is too generic to allowlist globally (a plain `plugin` entry would
+ *  mask genuine single-valued PLUGIN duplicates elsewhere). Unlike the set
+ *  above, these cannot be verified against an in-tree reader. */
+const REPEATABLE_SECTION_KEYS = new Set([
+  // Smithy's EZTROL GUI loads each PLUGIN line; its reader is proprietary and
+  // not in the LinuxCNC tree, so this is inferred from shipped configs (e.g.
+  // by_machine/smithy/*.ini load wizard + webwizard plugins).
+  'eztrol|plugin',
+]);
+
+/** True if a key is repeatable in the given section. Covers the global set,
+ *  the dynamic [DISPLAY] multi-message family (MULTIMESSAGE_ID and
+ *  MULTIMESSAGE_<id>_TEXT/TYPE/... where <id> is user-chosen, read via findall
+ *  in iniinfo.py:439-455), and the section-scoped exceptions above. Both
+ *  arguments must already be lowercased. */
+function isRepeatableKey(lc: string, sectionLc: string): boolean {
+  return (
+    REPEATABLE_KEYS.has(lc) ||
+    lc.startsWith('multimessage_') ||
+    REPEATABLE_SECTION_KEYS.has(`${sectionLc}|${lc}`)
+  );
 }
 
 /** Intra-file diagnostics for an INI document. */
@@ -73,10 +90,11 @@ export function diagnoseIniIntraFile(
   // Duplicate non-repeatable keys with CONFLICTING values within a section.
   // (A duplicate with the same value is harmless; LinuxCNC uses the first.)
   for (const section of file.sections) {
+    const sectionLc = section.name.text.toLowerCase();
     const firstValue = new Map<string, string>();
     for (const entry of section.entries) {
       const lc = entry.key.text.toLowerCase();
-      if (isRepeatableKey(lc)) continue;
+      if (isRepeatableKey(lc, sectionLc)) continue;
       const value = entry.value?.text ?? '';
       if (!firstValue.has(lc)) {
         firstValue.set(lc, value);

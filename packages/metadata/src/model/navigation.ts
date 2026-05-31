@@ -1,0 +1,204 @@
+import { Location, DocumentHighlight, DocumentHighlightKind } from 'vscode-languageserver-types';
+import {
+  HalFile, HalToken, collectIniRefs, findSection, findEntries,
+  LoadrtStatement, NetStatement, SetpStatement, SetsStatement, LinkStatement, NewsigStatement,
+} from '@linuxcnc/core';
+import { MachineModel, HalFileInput } from './types';
+
+export type Located =
+  | { kind: 'signal'; name: string; token: HalToken }
+  | { kind: 'pin'; name: string; token: HalToken }
+  | { kind: 'iniref'; section: string; key: string; token: HalToken }
+  | { kind: 'component'; name: string; token: HalToken }
+  | undefined;
+
+const inTok = (t: HalToken | undefined, off: number): t is HalToken => !!t && off >= t.start && off <= t.end;
+
+/** Identify the HAL symbol under `offset`. */
+export function locateHal(hal: HalFile, offset: number): Located {
+  for (const stmt of hal.statements) {
+    if (offset < stmt.start || offset > stmt.end) continue;
+    switch (stmt.kind) {
+      case 'loadrt': {
+        const s = stmt as LoadrtStatement;
+        if (inTok(s.componentToken, offset)) {
+          return s.componentToken.ini
+            ? iniLoc(s.componentToken)
+            : { kind: 'component', name: s.componentToken.text, token: s.componentToken };
+        }
+        for (const mp of s.modparams) if (inTok(mp.valueToken, offset) && mp.valueToken!.ini) return iniLoc(mp.valueToken!);
+        break;
+      }
+      case 'net': {
+        const s = stmt as NetStatement;
+        if (inTok(s.signalToken, offset)) return { kind: 'signal', name: s.signalToken.text, token: s.signalToken };
+        for (const l of s.links) if (inTok(l.pinToken, offset)) return l.pinToken.ini ? iniLoc(l.pinToken) : { kind: 'pin', name: l.pinToken.text, token: l.pinToken };
+        break;
+      }
+      case 'newsig': {
+        const s = stmt as NewsigStatement;
+        if (inTok(s.signalToken, offset)) return { kind: 'signal', name: s.signalToken.text, token: s.signalToken };
+        break;
+      }
+      case 'setp': {
+        const s = stmt as SetpStatement;
+        if (inTok(s.pinToken, offset)) return { kind: 'pin', name: s.pinToken.text, token: s.pinToken };
+        if (inTok(s.valueToken, offset) && s.valueToken!.ini) return iniLoc(s.valueToken!);
+        break;
+      }
+      case 'sets': {
+        const s = stmt as SetsStatement;
+        if (inTok(s.signalToken, offset)) return { kind: 'signal', name: s.signalToken.text, token: s.signalToken };
+        if (inTok(s.valueToken, offset) && s.valueToken!.ini) return iniLoc(s.valueToken!);
+        break;
+      }
+      case 'linkps': {
+        const s = stmt as LinkStatement;
+        if (inTok(s.firstToken, offset)) return { kind: 'pin', name: s.firstToken!.text, token: s.firstToken! };
+        if (inTok(s.secondToken, offset)) return { kind: 'signal', name: s.secondToken!.text, token: s.secondToken! };
+        break;
+      }
+      case 'linksp': {
+        const s = stmt as LinkStatement;
+        if (inTok(s.firstToken, offset)) return { kind: 'signal', name: s.firstToken!.text, token: s.firstToken! };
+        if (inTok(s.secondToken, offset)) return { kind: 'pin', name: s.secondToken!.text, token: s.secondToken! };
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return undefined;
+}
+
+function iniLoc(t: HalToken): Located {
+  return { kind: 'iniref', section: t.ini!.section, key: t.ini!.key, token: t };
+}
+
+/** Go-to-definition for the symbol at `offset` in file `uri`. */
+export function definition(model: MachineModel, uri: string, offset: number): Location[] {
+  const file = model.files.find((f) => f.uri === uri);
+  if (!file) return [];
+  const loc = locateHal(file.hal, offset);
+  if (!loc) return [];
+
+  if (loc.kind === 'signal') {
+    const def = model.signals.get(loc.name)?.firstDef;
+    return def ? [def] : [];
+  }
+  if (loc.kind === 'iniref') {
+    return iniKeyLocations(model, loc.section, loc.key);
+  }
+  if (loc.kind === 'pin') {
+    // Definition of a pin = the loadrt line that created its instance.
+    let best: { name: string; loadLoc: Location } | undefined;
+    for (const info of model.instances.values()) {
+      if (loc.name === info.name || loc.name.startsWith(info.name + '.')) {
+        if (!best || info.name.length > best.name.length) best = info;
+      }
+    }
+    return best ? [best.loadLoc] : [];
+  }
+  return [];
+}
+
+/** Find references for the symbol at `offset` in file `uri`. */
+export function references(model: MachineModel, uri: string, offset: number, includeDecl = true): Location[] {
+  const file = model.files.find((f) => f.uri === uri);
+  if (!file) return [];
+  const loc = locateHal(file.hal, offset);
+  if (!loc) return [];
+
+  if (loc.kind === 'signal') {
+    const node = model.signals.get(loc.name);
+    if (!node) return [];
+    const all = [...node.occurrences];
+    if (!includeDecl && node.firstDef) {
+      return all.filter((l) => !sameLoc(l, node.firstDef!));
+    }
+    return all;
+  }
+  if (loc.kind === 'iniref') {
+    const out: Location[] = [];
+    for (const f of model.files) {
+      for (const stmt of f.hal.statements) {
+        for (const ref of collectIniRefs(stmt)) {
+          if (eqi(ref.ini!.section, loc.section) && eqi(ref.ini!.key, loc.key)) {
+            out.push({ uri: f.uri, range: f.lineIndex.rangeAt(ref.start, ref.end) });
+          }
+        }
+      }
+    }
+    if (includeDecl) out.push(...iniKeyLocations(model, loc.section, loc.key));
+    return out;
+  }
+  if (loc.kind === 'pin') {
+    return scanPinOccurrences(model.files, loc.name);
+  }
+  return [];
+}
+
+/** Same-symbol highlights within a single file. */
+export function documentHighlights(model: MachineModel, uri: string, offset: number): DocumentHighlight[] {
+  const file = model.files.find((f) => f.uri === uri);
+  if (!file) return [];
+  const loc = locateHal(file.hal, offset);
+  if (!loc) return [];
+  if (loc.kind === 'signal') {
+    const node = model.signals.get(loc.name);
+    if (!node) return [];
+    const here = <T extends { uri: string }>(l: T) => l.uri === uri;
+    return [
+      ...node.occurrences.filter(here).map((l) => ({ range: l.range, kind: DocumentHighlightKind.Text })),
+      ...node.writers.filter((w) => here(w.loc)).map((w) => ({ range: w.loc.range, kind: DocumentHighlightKind.Write })),
+      ...node.readers.filter((r) => here(r.loc)).map((r) => ({ range: r.loc.range, kind: DocumentHighlightKind.Read })),
+    ];
+  }
+  if (loc.kind === 'pin') {
+    return scanPinOccurrences(model.files, loc.name)
+      .filter((l) => l.uri === uri)
+      .map((l) => ({ range: l.range, kind: DocumentHighlightKind.Text }));
+  }
+  return [];
+}
+
+function iniKeyLocations(model: MachineModel, section: string, key: string): Location[] {
+  if (!model.ini) return [];
+  const sec = findSection(model.ini.ini, section);
+  if (!sec) return [];
+  return findEntries(sec, key).map((e) => ({
+    uri: model.ini!.uri,
+    range: model.ini!.lineIndex.rangeAt(e.key.start, e.key.end),
+  }));
+}
+
+function scanPinOccurrences(files: HalFileInput[], pinName: string): Location[] {
+  const out: Location[] = [];
+  for (const f of files) {
+    for (const stmt of f.hal.statements) {
+      for (const t of pinTokens(stmt)) {
+        if (t.text === pinName) out.push({ uri: f.uri, range: f.lineIndex.rangeAt(t.start, t.end) });
+      }
+    }
+  }
+  return out;
+}
+
+function pinTokens(stmt: import('@linuxcnc/core').HalStatement): HalToken[] {
+  const toks: HalToken[] = [];
+  const s = stmt as unknown as Record<string, unknown>;
+  if (stmt.kind === 'net') for (const l of (s.links as NetStatement['links'])) toks.push(l.pinToken);
+  if (stmt.kind === 'setp' && s.pinToken) toks.push(s.pinToken as HalToken);
+  if ((stmt.kind === 'linkps' || stmt.kind === 'linkpp') && s.firstToken) toks.push(s.firstToken as HalToken);
+  if (stmt.kind === 'linkpp' && s.secondToken) toks.push(s.secondToken as HalToken);
+  if (stmt.kind === 'linksp' && s.secondToken) toks.push(s.secondToken as HalToken);
+  if (stmt.kind === 'unlinkp' && s.pinToken) toks.push(s.pinToken as HalToken);
+  return toks.filter((t) => t && !t.ini);
+}
+
+function sameLoc(a: Location, b: Location): boolean {
+  return a.uri === b.uri && a.range.start.line === b.range.start.line && a.range.start.character === b.range.start.character;
+}
+function eqi(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}

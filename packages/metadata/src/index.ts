@@ -6,6 +6,12 @@ export { MetadataIndex } from './db';
 export { assembleDB } from './assemble';
 export { hoverHal, hoverIni } from './providers/hover';
 
+// Machine model + cross-file analysis
+export * from './model/types';
+export { buildMachineModel, resolveInstance, resolvePinDir } from './model/build';
+export { crossFileDiagnostics, CrossFileOptions } from './model/diagnostics';
+export { definition, references, documentHighlights, locateHal, Located } from './model/navigation';
+
 import * as fs from 'fs';
 import { MetadataIndex } from './db';
 import { MetadataDB } from './types';
@@ -22,7 +28,7 @@ export function loadDBFromFile(file: string): MetadataIndex {
 
 // Extractors (used by the regenerate-db script and by the server's runtime
 // .comp overlay).
-export { parseHalDump, DumpedComponent } from './extractors/halDump';
+export { parseHalDump, parseHalDumpNames, DumpedComponent } from './extractors/halDump';
 export { parseCompFile, ParsedComp } from './extractors/comp';
 export { parseMan9, ParsedMan9 } from './extractors/man9';
 export { extractIniConfig, extractHoming } from './extractors/iniDocs';

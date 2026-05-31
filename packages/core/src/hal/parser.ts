@@ -171,15 +171,19 @@ function parseNet(
 ): NetStatement {
   const signalToken = rest[0];
   const links: NetLink[] = [];
-  let arrow: '<=' | '=>' | undefined;
+  let pendingArrow: '<=' | '=>' | '<=>' | undefined;
   for (let i = 1; i < rest.length; i++) {
     const t = rest[i];
     if (t.kind === HalTokenKind.Arrow) {
-      arrow = t.text as '<=' | '=>';
+      pendingArrow = t.text as '<=' | '=>' | '<=>';
       continue;
     }
     if (t.kind === HalTokenKind.Word || t.kind === HalTokenKind.IniRef) {
-      links.push({ pinToken: t, arrow });
+      // An arrow applies only to the pin it immediately precedes, not to all
+      // following pins (halcmd determines direction from pin direction; the
+      // arrow is a readability hint for the next pin only).
+      links.push({ pinToken: t, arrow: pendingArrow });
+      pendingArrow = undefined;
     }
   }
   return { kind: 'net', command: 'net', commandToken, ...base, signalToken, links };
@@ -192,10 +196,10 @@ function parseLink(
   base: Pick<BaseStatement, 'start' | 'end' | 'comment'>,
 ): HalStatement {
   let firstToken: HalToken | undefined = rest[0];
-  let arrow: '<=' | '=>' | undefined;
+  let arrow: '<=' | '=>' | '<=>' | undefined;
   let secondToken: HalToken | undefined;
   if (rest[1]?.kind === HalTokenKind.Arrow) {
-    arrow = rest[1].text as '<=' | '=>';
+    arrow = rest[1].text as '<=' | '=>' | '<=>';
     secondToken = rest[2];
   } else {
     secondToken = rest[1];

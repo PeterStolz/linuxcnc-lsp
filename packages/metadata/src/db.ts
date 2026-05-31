@@ -21,6 +21,16 @@ export class MetadataIndex {
     return this.overlay.get(name) ?? this.db.components[name];
   }
 
+  /** True if `name` is a known loadable component (documented, dumped, a known
+   *  hardware driver, or a workspace .comp), even when it has no extracted pins. */
+  hasComponentName(name: string): boolean {
+    return (
+      this.overlay.has(name) ||
+      !!this.db.components[name] ||
+      this.db.knownComponentNames.includes(name)
+    );
+  }
+
   componentNames(): string[] {
     return [...new Set([...Object.keys(this.db.components), ...this.overlay.keys()])];
   }

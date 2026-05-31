@@ -18,6 +18,8 @@ export interface AssembleInputs {
   iniSections: Record<string, IniSectionSchema>;
   consumedKeys: string[];
   homingKeys: Record<string, string>;
+  /** All loadable component names (incl. ones that could not be dumped). */
+  knownNames?: string[];
   commands?: MetadataDB['commands'];
   gcodeWords?: MetadataDB['gcodeWords'];
 }
@@ -101,6 +103,7 @@ export function assembleDB(input: AssembleInputs): MetadataDB {
     handled.add(c.name);
   }
 
+  db.knownComponentNames = [...new Set([...Object.keys(db.components), ...(input.knownNames ?? [])])];
   db.iniSections = input.iniSections;
   db.iniRuntimeConsumedKeys = input.consumedKeys;
   db.homingKeys = input.homingKeys;

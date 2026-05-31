@@ -85,6 +85,16 @@ describe('INI intra-file diagnostics', () => {
     expect(d.some((x) => x.code === 'ini.syntax.duplicateKey')).toBe(false);
   });
 
+  it('does NOT flag repeated PLUGIN in [EZTROL] (section-scoped exception)', () => {
+    const d = iniDiags('[EZTROL]\nPLUGIN = wizard.so\nPLUGIN = webwizard.so\n');
+    expect(d.some((x) => x.code === 'ini.syntax.duplicateKey')).toBe(false);
+  });
+
+  it('DOES flag a conflicting PLUGIN duplicate outside [EZTROL]', () => {
+    const d = iniDiags('[DISPLAY]\nPLUGIN = a.so\nPLUGIN = b.so\n');
+    expect(d.some((x) => x.code === 'ini.syntax.duplicateKey')).toBe(true);
+  });
+
   it('clean INI produces no diagnostics', () => {
     const d = iniDiags('[EMC]\nMACHINE = test\n[HAL]\nHALFILE = core.hal\n');
     expect(d).toHaveLength(0);

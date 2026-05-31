@@ -9,7 +9,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
-  parseHalDump, parseCompFile, parseMan9, extractIniConfig, extractHoming,
+  parseHalDump, parseHalDumpNames, parseCompFile, parseMan9, extractIniConfig, extractHoming,
   assembleDB, HAL_COMMANDS, ParsedComp, ParsedMan9,
 } from '../packages/metadata/src/index';
 
@@ -40,7 +40,19 @@ function listFiles(dir: string, ext: string): string[] {
 const dumpText =
   (readIf(path.join(RAW, 'hal-dump.txt')) ?? '') + '\n' + (readIf(path.join(RAW, 'hal-dump-extra.txt')) ?? '');
 const dump = parseHalDump(dumpText);
-console.log(`dump: ${dump.length} components`);
+const knownNames = new Set(parseHalDumpNames(dumpText));
+// Also treat every component/driver source file basename as a known module
+// name (hardware drivers like hal_motenc/hal_stg are not loadable in the sim
+// build but are valid `loadrt` targets in real installs).
+for (const dir of ['src/hal/components', 'src/hal/drivers']) {
+  for (const f of listFiles(path.join(LCNC, dir), '.c')) {
+    knownNames.add(path.basename(f, '.c'));
+  }
+  for (const f of listFiles(path.join(LCNC, dir), '.comp')) {
+    knownNames.add(path.basename(f, '.comp'));
+  }
+}
+console.log(`dump: ${dump.length} components, ${knownNames.size} known names`);
 
 // 2. .comp docs from the source tree.
 const comps: ParsedComp[] = [];
@@ -81,6 +93,7 @@ const db = assembleDB({
   iniSections,
   consumedKeys,
   homingKeys,
+  knownNames: [...knownNames],
   commands: HAL_COMMANDS,
 });
 

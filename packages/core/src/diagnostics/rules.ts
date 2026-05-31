@@ -30,7 +30,7 @@ export const RULES: readonly RuleDef[] = [
   { id: 'hal.pin.unknownPin', defaultSeverity: W, description: 'A pin/param is not produced by any loaded component.' },
   { id: 'hal.param.readonlyParamSet', defaultSeverity: E, description: 'setp targets a read-only parameter.' },
   { id: 'hal.signal.multipleWriters', defaultSeverity: E, description: 'A signal is driven by more than one output pin.' },
-  { id: 'hal.signal.noWriter', defaultSeverity: W, description: 'A signal has readers but no writer.' },
+  { id: 'hal.signal.noWriter', defaultSeverity: H, description: 'A signal has readers but no writer (advisory: the static model cannot see writers in userspace/Tcl components).' },
   { id: 'hal.signal.noReader', defaultSeverity: H, description: 'A signal is written but never read.' },
   { id: 'hal.signal.typeConflict', defaultSeverity: E, description: 'Pins of different HAL types are linked to one signal.' },
   { id: 'hal.iniref.sectionMissing', defaultSeverity: E, description: 'A [SECTION]KEY reference names a section absent from the INI.' },

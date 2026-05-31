@@ -122,7 +122,11 @@ export function tokenizeHal(text: string): HalLogicalLine[] {
       }
 
       if (ch === '<') {
-        if (text[i + 1] === '=') {
+        if (text[i + 1] === '=' && text[i + 2] === '>') {
+          // Bidirectional link arrow used with io pins (e.g. index-enable).
+          tokens.push({ kind: HalTokenKind.Arrow, start: i, end: i + 3, text: '<=>' });
+          i += 3;
+        } else if (text[i + 1] === '=') {
           tokens.push({ kind: HalTokenKind.Arrow, start: i, end: i + 2, text: '<=' });
           i += 2;
         } else {

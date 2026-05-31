@@ -65,7 +65,7 @@ export interface LoadusrStatement extends BaseStatement {
 export interface NetLink {
   pinToken: HalToken;
   /** Arrow in effect for this pin: '<=' pin is source, '=>' pin is sink. */
-  arrow?: '<=' | '=>';
+  arrow?: '<=' | '=>' | '<=>';
 }
 
 export interface NetStatement extends BaseStatement {
@@ -97,7 +97,7 @@ export interface LinkStatement extends BaseStatement {
   kind: 'linkps' | 'linksp' | 'linkpp';
   firstToken?: HalToken;
   secondToken?: HalToken;
-  arrow?: '<=' | '=>';
+  arrow?: '<=' | '=>' | '<=>';
 }
 
 export interface UnlinkpStatement extends BaseStatement {

@@ -116,6 +116,10 @@ export interface MetadataSourceInfo {
 export interface MetadataDB {
   source: MetadataSourceInfo;
   components: Record<string, ComponentDef>;
+  /** All known loadable component/module names (incl. ones with no extracted
+   *  pins, e.g. hardware drivers), so "unknown component" only fires for names
+   *  that truly do not exist in this LinuxCNC version. */
+  knownComponentNames: string[];
   iniSections: Record<string, IniSectionSchema>;
   /** Homing INI key -> rendered markdown of its docs section. */
   homingKeys: Record<string, string>;
@@ -129,6 +133,7 @@ export function emptyDB(source: MetadataSourceInfo): MetadataDB {
   return {
     source,
     components: {},
+    knownComponentNames: [],
     iniSections: {},
     homingKeys: {},
     iniRuntimeConsumedKeys: [],

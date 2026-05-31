@@ -116,6 +116,14 @@ function dirToPin(d: string): PinDir {
   return d === 'IN' ? 'in' : d === 'OUT' ? 'out' : 'io';
 }
 
+/** All module names mentioned in the dump (loaded @@@COMP and failed @@@FAIL),
+ *  i.e. every loadable rtlib component name. */
+export function parseHalDumpNames(text: string): string[] {
+  const names = new Set<string>();
+  for (const m of text.matchAll(/^@@@(?:COMP|FAIL)\|([^|\n]+)/gm)) names.add(m[1].trim());
+  return [...names];
+}
+
 /** Parse the @@@COMP/@@@END dump stream into per-component structural metadata. */
 export function parseHalDump(text: string): DumpedComponent[] {
   const out: DumpedComponent[] = [];

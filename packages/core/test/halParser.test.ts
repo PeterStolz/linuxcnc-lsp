@@ -45,10 +45,16 @@ describe('HAL parser', () => {
     expect(s.links.map((l) => l.pinToken.text)).toEqual([
       'joint.0.motor-pos-cmd', 'joint.0.motor-pos-fb', 'ddt_x.in',
     ]);
-    // The arrow applies to the pins after it.
+    // An arrow applies only to the pin it immediately precedes.
     expect(s.links[0].arrow).toBeUndefined();
     expect(s.links[1].arrow).toBe('=>');
-    expect(s.links[2].arrow).toBe('=>');
+    expect(s.links[2].arrow).toBeUndefined();
+  });
+
+  it('parses the bidirectional <=> arrow', () => {
+    const s = parseHal('net idx motenc.0.index <=> joint.0.index-enable').statements[0] as NetStatement;
+    expect(s.links.map((l) => l.pinToken.text)).toEqual(['motenc.0.index', 'joint.0.index-enable']);
+    expect(s.links[1].arrow).toBe('<=>');
   });
 
   it('parses net with a leading <= arrow', () => {
