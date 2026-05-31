@@ -30,6 +30,14 @@ const common = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+  // Resolve workspace packages to their TS source so the bundle never depends on
+  // each package's compiled dist/ existing — avoids a build-order race under
+  // `pnpm -r run build`, where the client's esbuild can start before the libs'
+  // `tsc -b` has produced dist/.
+  alias: {
+    '@linuxcnc/core': path.join(__dirname, '../core/src/index.ts'),
+    '@linuxcnc/metadata': path.join(__dirname, '../metadata/src/index.ts'),
+  },
 };
 
 const builds = [
