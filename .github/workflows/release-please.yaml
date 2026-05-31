@@ -42,6 +42,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # release-please owns the version (root package.json + tag); the extension's
+      # package.json is bumped here at build time so the VSIX carries the right
+      # version without release-please reformatting/conflicting on that file.
+      - name: Sync extension version from release tag
+        env:
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          node -e 'const fs=require("fs"),f="packages/client/package.json",v=process.env.TAG.replace(/^v/,"");fs.writeFileSync(f,fs.readFileSync(f,"utf8").replace(/"version":\s*"[^"]+"/,"\"version\": \""+v+"\""));'
+          echo "extension version -> $TAG"
+
       - name: Build + package VSIX
         run: pnpm run package
 

@@ -9,14 +9,7 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "draft": false,
-      "prerelease": false,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "packages/client/package.json",
-          "jsonpath": "$.version"
-        }
-      ]
+      "prerelease": false
     }
   }
 }

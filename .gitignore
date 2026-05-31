@@ -9,3 +9,4 @@ coverage/
 *.vsix
 .claude/
 .fuzzwork/
+package-lock.json
