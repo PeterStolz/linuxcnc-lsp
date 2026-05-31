@@ -28,10 +28,74 @@ Language support for **LinuxCNC** configuration files: `.hal` (HAL), `.ini`
 Open a folder containing your machine config (`.ini` + `.hal` files) for the
 cross-file features to work.
 
-If a `.hal` file is shared by **two machines** (two `.ini` files), pin which one
-provides its context with the **LinuxCNC: Select Active Machine** command (or the
-`linuxcnc.activeMachine` setting). Diagnostics, hover, navigation and completion
-then use the pinned machine instead of an arbitrary one.
+## Multiple machines in one workspace
+
+Cross-file features (the `[SECTION]KEY` check, hover, go-to-definition, completion)
+need to know which **machine** a `.hal` file belongs to — a machine is one `.ini`
+plus all the `.hal` files it pulls in via `[HAL]HALFILE`. Usually that mapping is
+unambiguous: one `.ini`, its own `.hal` files.
+
+It gets ambiguous when **the same `.hal` is pulled in by two or more `.ini` files**
+— very common in the LinuxCNC sample configs. In `configs/sim/axis`, for instance,
+`core_sim.hal` is shared by `axis.ini`, `axis_mm.ini` (metric) and
+`historical_lathe.ini`. Open `core_sim.hal` and the extension has three candidate
+machines; with no pin it just uses the **first one it finds**.
+
+### How you'll notice
+
+There's no popup — the symptom is *wrong cross-file results in a shared `.hal`*:
+
+- a `[SECTION]KEY` reference flagged as **missing** even though it exists — because
+  the value lives in the *other* machine's INI, not the one that was picked;
+- hover / go-to-definition on an INI reference jumping to the wrong machine's value
+  (e.g. inch vs. mm).
+
+If a shared `.hal` looks wrong, that's the cue to pin the machine you actually mean.
+
+### Pinning the active machine
+
+Run **LinuxCNC: Select Active Machine** from the Command Palette
+(`Ctrl/Cmd+Shift+P`):
+
+1. it scans the workspace for machine `.ini` files and lists them;
+2. pick the one whose context you want (or **None** to clear the pin);
+3. it writes `linuxcnc.activeMachine` to your workspace `.vscode/settings.json`.
+
+The server re-resolves immediately — no reload needed. You can also write the
+setting by hand:
+
+```jsonc
+// flexicam/.vscode/settings.json
+{
+  // The folder holds Flexicam.ini and Flexicam_qtdragon.ini, which share the
+  // same .hal files. Pin the qtdragon variant as the active machine.
+  "linuxcnc.activeMachine": "Flexicam_qtdragon.ini"
+}
+```
+
+The value is matched by path suffix, so use the shortest form that's unambiguous
+in your workspace:
+
+- a bare file name — `"Flexicam_qtdragon.ini"`
+- a workspace-relative path — `"configs/sim/Flexicam.ini"`
+- an absolute path — `"/home/cnc/linuxcnc/configs/flexicam/Flexicam.ini"`
+
+Leave it empty (`""`) to go back to "first machine found".
+
+### What the pin does (and doesn't) do
+
+- It's **one pin per workspace**, not per file. Whenever a `.hal` is shared, the
+  pinned machine wins — *as long as that machine actually pulls in this `.hal`*. If
+  the pinned machine doesn't own a given shared file, that file falls back to its
+  first owner, so the pin never makes things worse.
+- `.hal` files owned by exactly one machine are unaffected — pinning only matters
+  for shared files.
+- Working across machine families that don't share files? Re-run the command to
+  switch the pin as you move between them.
+
+> Heads-up: don't use a `${workspaceFolder}/…` value here. VS Code only expands
+> `${workspaceFolder}` for a few built-in settings, not third-party ones, so it
+> would be passed through literally and match nothing. Use a plain relative path.
 
 ## Credits
 

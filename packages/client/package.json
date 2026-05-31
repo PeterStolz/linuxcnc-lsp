@@ -82,7 +82,7 @@
         "linuxcnc.activeMachine": {
           "type": "string",
           "default": "",
-          "markdownDescription": "When a `.hal` file is shared by more than one machine (`.ini`), pin which machine provides its context — diagnostics, hover, go-to-definition/references, and completion all use the pinned machine. Set to the INI's file name or path, e.g. `MachineA.ini` or `configs/a/MachineA.ini`. Empty = use the first machine found. Tip: run **LinuxCNC: Select Active Machine** to pick from a list."
+          "markdownDescription": "When a `.hal` file is shared by more than one machine (`.ini`), pin which machine provides its context — diagnostics, hover, go-to-definition/references, and completion all use the pinned machine. Set to the INI's file name or a workspace-relative path, e.g. `MachineA.ini` or `configs/a/MachineA.ini` (not a `${workspaceFolder}` variable — VS Code does not expand it here). Empty = use the first machine found. Tip: run **LinuxCNC: Select Active Machine** to pick from a list."
         },
         "linuxcnc.iniDetection": {
           "type": "string",
