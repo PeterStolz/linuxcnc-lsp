@@ -1,6 +1,7 @@
 import {
   createConnection, ProposedFeatures, TextDocuments, TextDocumentSyncKind,
   InitializeResult, SemanticTokensBuilder, DidChangeConfigurationNotification, Diagnostic,
+  CompletionItem,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
@@ -8,6 +9,7 @@ import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@l
 import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
   definition, references, documentHighlights, MachineModel,
+  completeHal, completeIni,
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
@@ -66,6 +68,10 @@ connection.onInitialize((params): InitializeResult => {
       documentHighlightProvider: true,
       documentSymbolProvider: true,
       foldingRangeProvider: true,
+      completionProvider: {
+        triggerCharacters: ['[', ']', '.', '=', '$', ' '],
+        resolveProvider: false,
+      },
       semanticTokensProvider: {
         legend: { tokenTypes: [...SEMANTIC_TOKEN_TYPES], tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS] },
         full: true,
@@ -267,6 +273,24 @@ connection.onDocumentSymbol((params) => {
 connection.onFoldingRanges((params) => {
   const doc = documents.get(params.textDocument.uri);
   return doc ? computeFoldingRanges(getModel(doc)) : [];
+});
+
+connection.onCompletion((params): CompletionItem[] => {
+  if (!metadata) return [];
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return [];
+  const model = getModel(doc);
+  const offset = doc.offsetAt(params.position);
+  if (model.kind === 'hal' && model.hal) {
+    return completeHal({
+      hal: model.hal, lineIndex: model.lineIndex, text: model.text, offset,
+      index: metadata, model: modelForHal(doc.uri),
+    });
+  }
+  if (model.kind === 'ini' && model.ini) {
+    return completeIni({ ini: model.ini, lineIndex: model.lineIndex, text: model.text, offset, index: metadata });
+  }
+  return [];
 });
 
 connection.languages.semanticTokens.on((params) => {

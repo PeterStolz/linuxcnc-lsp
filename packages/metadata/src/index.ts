@@ -5,6 +5,9 @@ export * from './types';
 export { MetadataIndex } from './db';
 export { assembleDB } from './assemble';
 export { hoverHal, hoverIni } from './providers/hover';
+export {
+  completeHal, completeIni, HalCompletionContext, IniCompletionContext,
+} from './providers/completion';
 
 // Machine model + cross-file analysis
 export * from './model/types';

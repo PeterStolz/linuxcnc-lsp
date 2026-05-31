@@ -14,6 +14,10 @@ Language support for **LinuxCNC** configuration files: `.hal` (HAL), `.ini`
 - Hover docs for halcmd commands, component pins/params/functions, and INI keys,
   sourced from the LinuxCNC source
 - Hovering a homing INI variable renders that section of the LinuxCNC docs
+- Context-aware autocomplete: halcmd commands, `loadrt` component names and
+  module parameters (incl. Mesa `config=`), `addf` functions/threads, signal
+  names, component pins (incl. `joint.N.*`/`axis.x.*` motion pins), and
+  `[SECTION]KEY` INI references — plus section/key completion inside the INI
 - Custom workspace `.comp` components are parsed and contribute hover
 
 Open a folder containing your machine config (`.ini` + `.hal` files) for the
