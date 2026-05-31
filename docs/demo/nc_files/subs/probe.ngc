@@ -1,0 +1,10 @@
+o<probe> sub
+  ; Probe straight down from the current Z, retract, and leave the triggered
+  ; height in the global #<_probed_z>. Call with: o<probe> call
+  G38.2 Z[#<_start_z> - 20] F50
+  o100 if [#5070 EQ 0]
+    (debug, probe did not trigger)
+    o<probe> return [-1]
+  o100 endif
+  #<_probed_z> = #5063
+o<probe> endsub

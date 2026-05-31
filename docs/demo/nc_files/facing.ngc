@@ -1,0 +1,15 @@
+; Facing program — probes the surface, then makes three roughing passes.
+; Demonstrates the G-code outline, cross-file go-to-definition (o<probe> call
+; jumps to subs/probe.ngc), block folding, and the formatter.
+G21 G90 G54
+#<_start_z> = 5
+
+o<probe> call
+
+o<rough> repeat [3]
+  G1 X100 F800
+  G1 Y10
+  G1 X0
+o<rough> endrepeat
+
+M2
