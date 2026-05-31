@@ -1,0 +1,16 @@
+# Tabletop router — main HAL file (demo for the README screenshots).
+# Every diagnostic below is one the extension genuinely emits (verified).
+loadrt hal_parport cfg="0x378 out"
+loadrt pid count=3
+
+# Cross-file go-to-definition: Ctrl/Cmd-click [JOINT_0]PGAIN to jump to its
+# definition in tabletop.ini (PGAIN is defined there).
+setp pid.0.Pgain [JOINT_0]PGAIN
+
+# [JOINT_0]IGAIN is NOT defined in the INI -> red squiggle (hal.iniref.keyMissing)
+# with a quick-fix to add the key. This is the hero screenshot.
+setp pid.0.Igain [JOINT_0]IGAIN
+
+# `output` is an output pin, so setp-ing it is an error (hal.param.readonlyParamSet)
+# — a second, intra-file squiggle that shows up as you type.
+setp pid.0.output 1
