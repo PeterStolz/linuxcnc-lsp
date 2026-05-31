@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.4...v0.1.5) (2026-05-31)
+
+
+### Features
+
+* **gcode:** O-word subroutine navigation, formatter, and diagnostics ([#8](https://github.com/PeterStolz/linuxcnc-lsp/issues/8)) ([6493fd1](https://github.com/PeterStolz/linuxcnc-lsp/commit/6493fd1295934cec87d44da14f388782e1fa3c0b))
+
 ## [0.1.4](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.3...v0.1.4) (2026-05-31)
 
 
