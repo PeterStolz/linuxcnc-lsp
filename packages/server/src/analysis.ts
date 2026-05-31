@@ -1,13 +1,14 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
   LineIndex, SeverityName, Diagnostic,
-  parseHal, parseIni,
-  diagnoseHalIntraFile, diagnoseIniIntraFile,
+  parseHal, parseIni, parseGcode,
+  diagnoseHalIntraFile, diagnoseIniIntraFile, diagnoseGcodeIntraFile,
   buildHalSemanticTokens, buildIniSemanticTokens, SemanticTokenItem,
-  halDocumentSymbols, iniDocumentSymbols,
-  halFoldingRanges, iniFoldingRanges,
+  halDocumentSymbols, iniDocumentSymbols, gcodeDocumentSymbols,
+  halFoldingRanges, iniFoldingRanges, gcodeFoldingRanges,
+  formatGcode, GcodeFormatOptions,
 } from '@linuxcnc/core';
-import { DocumentSymbol, FoldingRange } from 'vscode-languageserver';
+import { DocumentSymbol, FoldingRange, TextEdit } from 'vscode-languageserver';
 
 export type DocKind = 'hal' | 'ini' | 'gcode';
 
@@ -39,6 +40,7 @@ export function buildDocModelFromText(uri: string, text: string): DocModel {
   const model: DocModel = { kind, text, lineIndex };
   if (kind === 'hal') model.hal = parseHal(text);
   else if (kind === 'ini') model.ini = parseIni(text);
+  else if (kind === 'gcode') model.gcode = parseGcode(text);
   return model;
 }
 
@@ -54,6 +56,7 @@ export interface DocModel {
   lineIndex: LineIndex;
   hal?: ReturnType<typeof parseHal>;
   ini?: ReturnType<typeof parseIni>;
+  gcode?: ReturnType<typeof parseGcode>;
 }
 
 export function buildDocModel(doc: TextDocument): DocModel {
@@ -63,6 +66,7 @@ export function buildDocModel(doc: TextDocument): DocModel {
   const model: DocModel = { kind, text, lineIndex };
   if (kind === 'hal') model.hal = parseHal(text);
   else if (kind === 'ini') model.ini = parseIni(text);
+  else if (kind === 'gcode') model.gcode = parseGcode(text);
   return model;
 }
 
@@ -74,6 +78,9 @@ export function computeDiagnostics(model: DocModel, opts: AnalysisOptions): Diag
   }
   if (model.kind === 'ini' && model.ini) {
     return diagnoseIniIntraFile(model.text, model.ini, model.lineIndex, o);
+  }
+  if (model.kind === 'gcode' && model.gcode) {
+    return diagnoseGcodeIntraFile(model.text, model.gcode, model.lineIndex, o);
   }
   return [];
 }
@@ -87,11 +94,19 @@ export function computeSemanticTokens(model: DocModel): SemanticTokenItem[] {
 export function computeDocumentSymbols(model: DocModel): DocumentSymbol[] {
   if (model.kind === 'hal' && model.hal) return halDocumentSymbols(model.hal, model.lineIndex);
   if (model.kind === 'ini' && model.ini) return iniDocumentSymbols(model.ini, model.lineIndex);
+  if (model.kind === 'gcode' && model.gcode) return gcodeDocumentSymbols(model.gcode, model.lineIndex);
   return [];
 }
 
 export function computeFoldingRanges(model: DocModel): FoldingRange[] {
   if (model.kind === 'hal') return halFoldingRanges(model.lineIndex);
   if (model.kind === 'ini' && model.ini) return iniFoldingRanges(model.ini, model.lineIndex);
+  if (model.kind === 'gcode' && model.gcode) return gcodeFoldingRanges(model.gcode, model.lineIndex);
+  return [];
+}
+
+/** Formatting edits for a document (currently G-code only). */
+export function computeFormat(model: DocModel, opts: GcodeFormatOptions): TextEdit[] {
+  if (model.kind === 'gcode' && model.gcode) return formatGcode(model.lineIndex, model.gcode, opts);
   return [];
 }
