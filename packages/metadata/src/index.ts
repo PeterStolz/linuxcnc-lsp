@@ -13,7 +13,7 @@ export {
 export * from './model/types';
 export { buildMachineModel, resolveInstance, resolvePinDir } from './model/build';
 export { crossFileDiagnostics, CrossFileOptions } from './model/diagnostics';
-export { definition, references, documentHighlights, locateHal, Located } from './model/navigation';
+export { definition, references, documentHighlights, locateHal, Located, iniRefsTo } from './model/navigation';
 
 import * as fs from 'fs';
 import { MetadataIndex } from './db';

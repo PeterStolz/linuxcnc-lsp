@@ -8,7 +8,7 @@ import { URI } from 'vscode-uri';
 import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@linuxcnc/core';
 import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
-  definition, references, documentHighlights, MachineModel,
+  definition, references, documentHighlights, MachineModel, iniRefsTo,
   completeHal, completeIni,
 } from '@linuxcnc/metadata';
 import {
@@ -234,7 +234,11 @@ connection.onHover((params) => {
   const model = getModel(doc);
   const offset = doc.offsetAt(params.position);
   if (model.kind === 'hal' && model.hal) return hoverHal(model.hal, model.lineIndex, offset, metadata);
-  if (model.kind === 'ini' && model.ini) return hoverIni(model.ini, model.lineIndex, offset, metadata);
+  if (model.kind === 'ini' && model.ini) {
+    const mm = project.buildModel(doc.uri, metadata);
+    const refCount = mm ? (s: string, k: string) => iniRefsTo(mm, s, k).length : undefined;
+    return hoverIni(model.ini, model.lineIndex, offset, metadata, refCount);
+  }
   return null;
 });
 

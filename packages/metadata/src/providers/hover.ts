@@ -227,11 +227,16 @@ function renderIniKey(section: string, key: string, index: MetadataIndex): strin
 // INI hover
 // ---------------------------------------------------------------------------
 
+/** Optional cross-file info for INI hover: how many HAL `[SEC]KEY` refs point at
+ *  this key. When provided, the key hover gains a "referenced by N" annotation. */
+export type IniRefCount = (section: string, key: string) => number;
+
 export function hoverIni(
   ini: IniFile,
   lineIndex: LineIndex,
   offset: number,
   index: MetadataIndex,
+  refCount?: IniRefCount,
 ): Hover | null {
   for (const section of ini.sections) {
     if (offset >= section.name.start && offset <= section.name.end) {
@@ -243,12 +248,25 @@ export function hoverIni(
     if (offset < section.start || offset > section.end) continue;
     for (const entry of section.entries) {
       if (offset >= entry.key.start && offset <= entry.key.end) {
-        return md(
-          renderIniKey(section.name.text, entry.key.text, index),
-          lineIndex.rangeAt(entry.key.start, entry.key.end),
-        );
+        let body = renderIniKey(section.name.text, entry.key.text, index);
+        if (refCount) {
+          body += '\n\n' + iniRefAnnotation(section.name.text, entry.key.text, index, refCount);
+        }
+        return md(body, lineIndex.rangeAt(entry.key.start, entry.key.end));
       }
     }
   }
   return null;
+}
+
+/** Render the cross-reference status line for an INI key. */
+function iniRefAnnotation(section: string, key: string, index: MetadataIndex, refCount: IniRefCount): string {
+  const n = refCount(section, key);
+  if (n > 0) return `📎 Referenced by **${n}** HAL location${n === 1 ? '' : 's'}.`;
+  // Not referenced from HAL. Many keys are read directly by LinuxCNC core, so
+  // only flag the genuinely-orphaned ones.
+  if (index.isRuntimeConsumed(key) || index.iniKey(section, key)) {
+    return `_Read directly by LinuxCNC core (no HAL reference needed)._`;
+  }
+  return `⚠️ Not referenced by any HAL file in this machine.`;
 }

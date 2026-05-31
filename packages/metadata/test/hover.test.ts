@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import * as path from 'path';
 import { parseHal, parseIni, LineIndex } from '@linuxcnc/core';
-import { loadDBFromFile, hoverHal, hoverIni, MetadataIndex } from '../src/index';
+import {
+  loadDBFromFile, hoverHal, hoverIni, MetadataIndex, buildMachineModel, iniRefsTo,
+} from '../src/index';
 
 const DB = path.resolve(__dirname, '../data/db.json');
 let index: MetadataIndex;
@@ -77,5 +79,44 @@ describe('INI hover', () => {
   it('renders homing docs when hovering a homing key in a JOINT section', () => {
     const h = hIni('[JOINT_0]\nHOME_SEARCH_VEL = 20', 'HOME_SEARCH_VEL');
     expect(value(h)).toContain('machine-units per second');
+  });
+});
+
+describe('INI hover — cross-reference annotation', () => {
+  function modelFor(iniText: string, halText: string) {
+    const ini = parseIni(iniText);
+    return buildMachineModel({
+      iniInput: { uri: 'file:///m.ini', lineIndex: new LineIndex(iniText), ini },
+      files: [{ uri: 'file:///m.hal', text: halText, lineIndex: new LineIndex(halText), hal: parseHal(halText), phase: 'pre', order: 0 }],
+      index,
+    });
+  }
+  function hIniM(iniText: string, marker: string, halText: string) {
+    const offset = iniText.indexOf(marker) + Math.floor(marker.length / 2);
+    const model = modelFor(iniText, halText);
+    return hoverIni(
+      parseIni(iniText), new LineIndex(iniText), offset, index,
+      (s, k) => iniRefsTo(model, s, k).length,
+    );
+  }
+
+  it('reports the number of HAL references for a key used from HAL', () => {
+    const h = hIniM(
+      '[JOINT_0]\nSTEPGEN_MAXACCEL = 21\n',
+      'STEPGEN_MAXACCEL',
+      'loadrt stepgen step_type=0\nsetp stepgen.0.maxaccel [JOINT_0]STEPGEN_MAXACCEL\n',
+    );
+    expect(value(h)).toMatch(/Referenced by \*\*1\*\* HAL location/);
+  });
+
+  it('does not flag a core-consumed key that HAL never references', () => {
+    const h = hIniM('[TRAJ]\nMAX_LINEAR_VELOCITY = 5\n', 'MAX_LINEAR_VELOCITY', 'loadrt stepgen\n');
+    expect(value(h)).toContain('Read directly by LinuxCNC core');
+    expect(value(h)).not.toContain('Not referenced');
+  });
+
+  it('warns when a custom key is referenced by no HAL file', () => {
+    const h = hIniM('[CUSTOM]\nMY_ORPHAN_KEY = 1\n', 'MY_ORPHAN_KEY', 'loadrt stepgen\n');
+    expect(value(h)).toContain('Not referenced by any HAL file');
   });
 });

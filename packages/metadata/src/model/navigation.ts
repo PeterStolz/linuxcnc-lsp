@@ -162,6 +162,23 @@ export function documentHighlights(model: MachineModel, uri: string, offset: num
   return [];
 }
 
+/** All HAL `[SECTION]KEY` references to a given INI key, across every HAL file
+ *  of the machine (case-insensitive). Used for the INI-key "referenced by N"
+ *  hover annotation and for find-references. */
+export function iniRefsTo(model: MachineModel, section: string, key: string): Location[] {
+  const out: Location[] = [];
+  for (const f of model.files) {
+    for (const stmt of f.hal.statements) {
+      for (const ref of collectIniRefs(stmt)) {
+        if (eqi(ref.ini!.section, section) && eqi(ref.ini!.key, key)) {
+          out.push({ uri: f.uri, range: f.lineIndex.rangeAt(ref.start, ref.end) });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 function iniKeyLocations(model: MachineModel, section: string, key: string): Location[] {
   if (!model.ini) return [];
   const sec = findSection(model.ini.ini, section);
