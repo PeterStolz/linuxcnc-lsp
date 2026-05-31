@@ -69,7 +69,7 @@ connection.onInitialize((params): InitializeResult => {
       documentSymbolProvider: true,
       foldingRangeProvider: true,
       completionProvider: {
-        triggerCharacters: ['[', ']', '.', '=', '$', ' '],
+        triggerCharacters: ['[', ']', '.', '=', '$', ' ', '"'],
         resolveProvider: false,
       },
       renameProvider: { prepareProvider: true },

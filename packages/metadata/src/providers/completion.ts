@@ -111,11 +111,52 @@ function prefixMatch(candidate: string, partial: string): boolean {
 // HAL completion
 // ---------------------------------------------------------------------------
 
+/** Mesa hostmot2 `config="..."` string keys (from hostmot2.9.adoc). */
+const HM2_CONFIG_KEYS: Array<{ key: string; doc?: string }> = [
+  { key: 'firmware', doc: 'Firmware bitfile to load, e.g. `hm2/5i25/7i76x2.BIT`' },
+  { key: 'num_encoders', doc: 'Number of encoder instances to enable' },
+  { key: 'num_pwmgens', doc: 'Number of PWM generator instances to enable' },
+  { key: 'num_3pwmgens', doc: 'Number of 3-phase PWM generator instances' },
+  { key: 'num_stepgens', doc: 'Number of step generator instances to enable' },
+  { key: 'num_resolvers', doc: 'Number of resolver instances' },
+  { key: 'num_sserials', doc: 'Number of Smart Serial instances' },
+  { key: 'sserial_port_0', doc: 'Smart Serial port 0 channel mask, e.g. `00xxxxxx`' },
+  { key: 'num_dplls', doc: 'Number of DPLL instances' },
+  { key: 'num_leds', doc: 'Number of LED instances' },
+  { key: 'num_bspis', doc: 'Number of Buffered SPI instances' },
+  { key: 'num_rcpwmgens', doc: 'Number of RC-servo PWM instances' },
+  { key: 'num_ssrs', doc: 'Number of solid-state-relay instances' },
+  { key: 'enable_raw', doc: 'Enable the raw read/write debug interface' },
+];
+
+/** Completion inside a Mesa `config="..."` string (keys, not values). */
+function mesaConfigCompletion(ctx: HalCompletionContext, line: string, offset: number): CompletionItem[] | null {
+  if (line.trim().split(/\s+/)[0]?.toLowerCase() !== 'loadrt') return null;
+  const re = /config\s*=\s*"/gi;
+  let m: RegExpExecArray | null;
+  let open = -1;
+  while ((m = re.exec(line))) open = m.index + m[0].length;
+  if (open < 0) return null;
+  const segment = line.slice(open);
+  if (segment.includes('"')) return null; // string already closed before the cursor
+  const partial = /(\S*)$/.exec(segment)?.[1] ?? '';
+  if (partial.includes('=') || partial.startsWith('[')) return null; // value side / INI ref
+  const range = ctx.lineIndex.rangeAt(offset - partial.length, offset);
+  return HM2_CONFIG_KEYS
+    .filter((k) => prefixMatch(k.key, partial))
+    .map((k) => item(k.key, range, { kind: CompletionItemKind.Property, detail: 'Mesa config', doc: k.doc, insertText: `${k.key}=` }));
+}
+
 export function completeHal(ctx: HalCompletionContext): CompletionItem[] {
   const { text, offset, lineIndex } = ctx;
   const { line } = logicalPrefix(text, offset);
   const px = splitPrefix(line, offset);
   const range = lineIndex.rangeAt(px.partialStart, offset);
+
+  // 0. Mesa config string keys (handled first — spaces inside the quotes would
+  //    otherwise confuse whitespace-based context detection).
+  const mesa = mesaConfigCompletion(ctx, line, offset);
+  if (mesa) return mesa;
 
   // 1. INI reference (`[SEC]KEY`) — may appear in any value position. Only when a
   //    command has already been typed (avoids hijacking line-start `[`).

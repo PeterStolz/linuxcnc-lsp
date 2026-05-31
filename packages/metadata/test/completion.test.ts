@@ -113,6 +113,31 @@ describe('HAL completion — loadrt', () => {
   });
 });
 
+describe('HAL completion — Mesa config string', () => {
+  it('completes config keys right after the opening quote', () => {
+    const items = hal('loadrt hostmot2\nloadrt hm2_pci config="|');
+    expect(labels(items)).toContain('num_stepgens');
+    expect(labels(items)).toContain('firmware');
+    expect(inserted(items, 'num_stepgens')).toBe('num_stepgens=');
+  });
+
+  it('completes config keys after a space, with multiple keys already present', () => {
+    const items = hal('loadrt hm2_eth config="num_encoders=3 num_st|');
+    expect(labels(items)).toContain('num_stepgens');
+    expect(labels(items)).not.toContain('num_encoders'); // filtered by "num_st"
+  });
+
+  it('does not fire on the value side of a config key', () => {
+    expect(hal('loadrt hm2_eth config="num_stepgens=|')).toEqual([]);
+  });
+
+  it('does not fire once the config string is closed', () => {
+    // after the closing quote we are back to ordinary loadrt context
+    const items = hal('loadrt hm2_eth config="num_stepgens=5" |');
+    expect(labels(items)).not.toContain('num_stepgens');
+  });
+});
+
 describe('HAL completion — addf', () => {
   it('completes per-instance function names', () => {
     const items = hal('loadrt pid count=2\naddf pid.0.|');
