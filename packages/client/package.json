@@ -3,7 +3,7 @@
   "displayName": "LinuxCNC LSP",
   "description": "Language support for LinuxCNC HAL, INI and G-code files",
   "version": "0.1.0",
-  "publisher": "linuxcnc-community",
+  "publisher": "PeterStolz",
   "license": "GPL-2.0-or-later",
   "private": true,
   "type": "commonjs",
