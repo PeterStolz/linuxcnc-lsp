@@ -1,0 +1,233 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- AXIS PyVCP side panel. Referenced from Flexicam.ini [DISPLAY] PYVCP=.
+     HAL pins appear as pyvcp.<halpin>; wired in custom_postgui.hal. -->
+<pyvcp>
+  <labelframe text="A6-RS servo drives">
+    <relief>RIDGE</relief>
+    <bd>3</bd>
+
+    <!-- Per-drive S-RDY LEDs. TRUE = drive's Servo Ready DO (DO1, NO logic)
+         is closed, i.e. drive is powered + initialised + no fault, waiting
+         for S-ON. Green = ready; gray = unpowered, faulted, or DO1 not yet
+         configured. Polarity note: if a drive is visibly Ready but its LED
+         stays gray, swap input-2X for input-2X-not in custom.hal:137-140. -->
+    <hbox>
+      <label><text>" ready:   X "</text></label>
+      <led><halpin>"rdy-x"</halpin><size>14</size><on_color>"green"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  X2 "</text></label>
+      <led><halpin>"rdy-x2"</halpin><size>14</size><on_color>"green"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  Y  "</text></label>
+      <led><halpin>"rdy-y"</halpin><size>14</size><on_color>"green"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  Z  "</text></label>
+      <led><halpin>"rdy-z"</halpin><size>14</size><on_color>"green"</on_color><off_color>"gray"</off_color></led>
+    </hbox>
+
+    <!-- Per-drive fault LEDs. TRUE = that drive's Fault DO (DO4, wired NC =>
+         fail-safe: red on a real fault OR if the drive is unpowered). After
+         a successful reset the LED goes red -> green. -->
+    <hbox>
+      <label><text>" fault:     X "</text></label>
+      <led><halpin>"flt-x"</halpin><size>14</size><on_color>"red"</on_color><off_color>"green"</off_color></led>
+      <label><text>"  X2 "</text></label>
+      <led><halpin>"flt-x2"</halpin><size>14</size><on_color>"red"</on_color><off_color>"green"</off_color></led>
+      <label><text>"  Y  "</text></label>
+      <led><halpin>"flt-y"</halpin><size>14</size><on_color>"red"</on_color><off_color>"green"</off_color></led>
+      <label><text>"  Z  "</text></label>
+      <led><halpin>"flt-z"</halpin><size>14</size><on_color>"red"</on_color><off_color>"green"</off_color></led>
+    </hbox>
+
+    <!-- Momentary push: TRUE while held. Rising edge fires the alarm-reset
+         oneshot in custom.hal -> 0.5 s pulse on output-05 -> all drives' DI4.
+         Use with the machine OFF, after clearing the fault cause. -->
+    <button>
+      <halpin>"drive-reset"</halpin>
+      <text>"Reset drive faults"</text>
+    </button>
+
+    <!-- Lights while the reset pulse is being sent (feedback only). -->
+    <hbox>
+      <label><text>" reset pulse: "</text></label>
+      <led>
+        <halpin>"drive-reset-active"</halpin>
+        <size>14</size>
+        <on_color>"green"</on_color>
+        <off_color>"gray"</off_color>
+      </led>
+    </hbox>
+  </labelframe>
+
+  <labelframe text="Home switches">
+    <relief>RIDGE</relief>
+    <bd>3</bd>
+
+    <!-- Per-joint home switch status. Sourced from input-16..19-not in
+         Flexicam.hal (x/x2/y/z-home-sw nets). Yellow = switch active (joint
+         on its home position); gray = open. Also used as neg/pos limit by
+         custom.hal so a lit LED here means the joint is currently parked. -->
+    <hbox>
+      <label><text>" home:   X "</text></label>
+      <led><halpin>"home-x"</halpin><size>14</size><on_color>"yellow"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  X2 "</text></label>
+      <led><halpin>"home-x2"</halpin><size>14</size><on_color>"yellow"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  Y  "</text></label>
+      <led><halpin>"home-y"</halpin><size>14</size><on_color>"yellow"</on_color><off_color>"gray"</off_color></led>
+      <label><text>"  Z  "</text></label>
+      <led><halpin>"home-z"</halpin><size>14</size><on_color>"yellow"</on_color><off_color>"gray"</off_color></led>
+    </hbox>
+  </labelframe>
+
+  <labelframe text="Spindle">
+    <relief>RIDGE</relief>
+    <bd>3</bd>
+
+    <!-- Commanded RPM (spindle.0.speed-out-abs) vs measured RPM derived from
+         Berges Kl.13 analog frequency output on Mesa input-02. The at-speed
+         LED mirrors spindle.0.at-speed, which is now driven by the `near`
+         comp in custom.hal (10% relative + 1000 RPM absolute tolerance). Green
+         once "measured" tracks "commanded" within that band; red while
+         ramping or after a fault. G-code spindle-synchronised moves wait on
+         this LED going green. -->
+    <hbox>
+      <label><text>" cmd RPM:          "</text></label>
+      <number>
+        <halpin>"spindle-cmd-rpm"</halpin>
+        <format>"6.0f"</format>
+      </number>
+    </hbox>
+    <hbox>
+      <label><text>" measured RPM: "</text></label>
+      <number>
+        <halpin>"spindle-fb-rpm"</halpin>
+        <format>"6.0f"</format>
+      </number>
+    </hbox>
+    <hbox>
+      <label><text>" Kl.13 (V):          "</text></label>
+      <number>
+        <halpin>"spindle-fb-volts"</halpin>
+        <format>"6.2f"</format>
+      </number>
+    </hbox>
+    <hbox>
+      <label><text>" at speed:                "</text></label>
+      <led>
+        <halpin>"spindle-at-speed-led"</halpin>
+        <size>14</size>
+        <on_color>"green"</on_color>
+        <off_color>"red"</off_color>
+      </led>
+    </hbox>
+  </labelframe>
+
+  <labelframe text="Pneumatics &amp; Probe">
+    <relief>RIDGE</relief>
+    <bd>3</bd>
+
+    <!-- Single 2-wire pressure switch on Mesa input-09 (see custom.hal):
+         closed under pressure, open without. Green = pressure OK, red = no
+         pressure / broken wire. Display only, no automated fault action. -->
+    <hbox>
+      <label><text>" air pressure:       "</text></label>
+      <led>
+        <halpin>"air-ok"</halpin>
+        <size>14</size>
+        <on_color>"green"</on_color>
+        <off_color>"red"</off_color>
+      </led>
+    </hbox>
+
+    <!-- Pneumatic probe-cylinder retracted-position sensor on Mesa input-01
+         (see custom.hal): 3-wire PNP reed/inductive sensor mounted at the
+         top of the air cylinder. Green = probe retracted (safe to move XY);
+         red = extended or broken wire. If first power-on shows inverted
+         polarity, flip input-01 to input-01-not in custom.hal. -->
+    <hbox>
+      <label><text>" probe retracted: "</text></label>
+      <led>
+        <halpin>"probe-retracted"</halpin>
+        <size>14</size>
+        <on_color>"green"</on_color>
+        <off_color>"red"</off_color>
+      </led>
+    </hbox>
+
+    <!-- Tool touch-off plate on Mesa input-08 (see custom.hal): NPN-style,
+         pulled to chassis ground when the spindle tool presses the plate.
+         Yellow = tool currently touching (probe-in active); gray = idle.
+         Driven by the same probe-in signal feeding motion.probe-input, so
+         this lights up during G38.x probing and tool-length touch-offs. -->
+    <hbox>
+      <label><text>" tool touch:          "</text></label>
+      <led>
+        <halpin>"tool-touch"</halpin>
+        <size>14</size>
+        <on_color>"yellow"</on_color>
+        <off_color>"gray"</off_color>
+      </led>
+    </hbox>
+
+    <!-- Spindle-mounted touch probe stylus on Mesa input-00 (see
+         custom.hal): 2-wire microswitch. Once loaded by Mesa's 10 k
+         pull-down the line sits at 0 V while open and goes to +24 V
+         when the contact closes; active-HIGH at the pin, read as
+         input-00 directly. Yellow = stylus currently in contact; gray
+         = idle. Used for X/Y edge-finding (Z is measured via the fixed
+         plate above). -->
+    <hbox>
+      <label><text>" touch probe:       "</text></label>
+      <led>
+        <halpin>"touch-probe"</halpin>
+        <size>14</size>
+        <on_color>"yellow"</on_color>
+        <off_color>"gray"</off_color>
+      </led>
+    </hbox>
+
+    <!-- One-shot Z touch-off: press once to run subroutines/touchoff_z.ngc
+         via halui.mdi-command-00. Sequence is deploy plate -> probe down at
+         120 mm/min -> G10 L20 P1 Z55 -> retract 10 mm -> stow plate. Only
+         fires when the machine is ON and IDLE (halui requirement). Z must be
+         positioned above the plate first, with enough clearance for the
+         plate to deploy underneath the tool. -->
+    <button>
+      <halpin>"touchoff-z-btn"</halpin>
+      <text>"Touch off Z"</text>
+    </button>
+  </labelframe>
+
+  <labelframe text="Pneumatics (manual)">
+    <relief>RIDGE</relief>
+    <bd>3</bd>
+
+    <!-- Momentary holding buttons for the 4 pneumatic solenoids on TB5
+         outputs 12-15 (see custom.hal). Each button writes the matching
+         signal in custom_postgui.hal: held = TRUE (output-N ON, solenoid
+         energised); released = FALSE (de-energised). These are the only
+         writers for now; when M6 tool-change remap is implemented later,
+         the script writer needs to be OR'd with the button pin. -->
+
+    <!-- output-12: touch-sensor deploy solenoid. Hold to lower the probe. -->
+    <button>
+      <halpin>"probe-lower-btn"</halpin>
+      <text>"Lower probe (hold)"</text>
+    </button>
+
+    <!-- output-13: tool eject solenoid. Hold to open the collet. -->
+    <button>
+      <halpin>"tool-release-btn"</halpin>
+      <text>"Release tool (hold)"</text>
+    </button>
+
+    <!-- output-14: dust cover NC solenoid (energise = up). Hold to lift. -->
+    <button>
+      <halpin>"dust-cover-up-btn"</halpin>
+      <text>"Dust cover up (hold)"</text>
+    </button>
+
+    <!-- output-15: spindle dust-suction air-blow. Hold for cleaning blast. -->
+    <button>
+      <halpin>"spindle-dust-air-btn"</halpin>
+      <text>"Spindle air blast (hold)"</text>
+    </button>
+  </labelframe>
+</pyvcp>

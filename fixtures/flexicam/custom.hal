@@ -1,0 +1,517 @@
+# Include your custom HAL commands here
+# This file will not be overwritten when you run PNCconf again
+
+# X (joint 0)
+unlinkp joint.0.neg-lim-sw-in
+unlinkp joint.0.pos-lim-sw-in
+net x-home-sw  => joint.0.neg-lim-sw-in joint.0.pos-lim-sw-in
+
+# X2 (joint 1)
+unlinkp joint.1.neg-lim-sw-in
+unlinkp joint.1.pos-lim-sw-in
+net x2-home-sw => joint.1.neg-lim-sw-in joint.1.pos-lim-sw-in
+
+# Y (joint 2)
+unlinkp joint.2.neg-lim-sw-in
+unlinkp joint.2.pos-lim-sw-in
+net y-home-sw  => joint.2.neg-lim-sw-in joint.2.pos-lim-sw-in
+
+# Z (joint 3)
+unlinkp joint.3.neg-lim-sw-in
+unlinkp joint.3.pos-lim-sw-in
+net z-home-sw  => joint.3.neg-lim-sw-in joint.3.pos-lim-sw-in
+
+
+
+# --------------------------------------------------------------------
+# Spindle: Berges ACM-D2 via Mesa 7i76E/7i76EU TB4 "ANALOG SPINDLE"
+#
+# Mesa TB4 provides a potentiometer-replacement output:
+#  - SPIN+ / SPIN- must be fed from the drive's reference supply (e.g. Berges Kl.9/+10V and Kl.10/GND)
+#  - SPINOUT is the "wiper" voltage (0..10V)
+#
+# HostMot2 pins:
+#  hm2_7i76e.0.7i76.0.0.spinout   (float) -> speed command
+#  hm2_7i76e.0.7i76.0.0.spinena   (bit)   -> enables output (otherwise SPINOUT is forced to SPIN-)
+#  hm2_7i76e.0.7i76.0.0.spindir   (bit)   -> direction
+#
+# Scale LinuxCNC commanded RPM (spindle.0.speed-out-abs) to 0..10V on SPINOUT.
+setp hm2_7i76e.0.7i76.0.0.spinout-minlim   0
+setp hm2_7i76e.0.7i76.0.0.spinout-maxlim   [SPINDLE_0]MAX_FORWARD_VELOCITY
+setp hm2_7i76e.0.7i76.0.0.spinout-scalemax [SPINDLE_0]MAX_FORWARD_VELOCITY
+
+net spindle-enable           => hm2_7i76e.0.7i76.0.0.spinena
+net spindle-vel-cmd-rpm-abs  => hm2_7i76e.0.7i76.0.0.spinout
+# Make DIR true for reverse (matches Berges "Reversierung" input semantics)
+net spindle-ccw              => hm2_7i76e.0.7i76.0.0.spindir
+
+# Spindle feedback: Berges Kl.13 (analog frequency output, 0..10 V) on Mesa
+# input-02 (TB6). The 7I76EU samples that pin as an 8-bit ADC alongside the
+# digital reading -- needs Flexicam.hal sserial_port_0 char 0 = '1' (mode 1).
+# Berges TAB3.A.out=0 + TAB3.Fm=1000 maps:
+#   10 V_Kl.13 <-> 1000 Hz <-> 60000 RPM <-> matches [SPINDLE_0]MAX_FORWARD_VELOCITY
+# Two scale instances because LinuxCNC's spindle expects feedback in two units:
+#   pid.s.feedback     wants RPM   (10 V * 6000 = 60000)
+#   spindle.0.speed-in wants RPS   (10 V *  100 =  1000)
+# Both nets are declared with =>consumers in Flexicam.hal but had no writer
+# until now (which is the other reason at-speed never worked).
+# HAL requires one loadrt per comp type, so all `scale` instances (these two
+# + joy-jog-speed-scale used by the Xbox jog further down) share this line.
+# It has to come before the first addf of any named instance, hence the hoist
+# from the joystick block to here.
+loadrt scale names=spindle-fb-rpm-scale,spindle-fb-rps-scale,joy-jog-speed-scale
+addf spindle-fb-rpm-scale servo-thread
+addf spindle-fb-rps-scale servo-thread
+setp spindle-fb-rpm-scale.gain 6000
+setp spindle-fb-rps-scale.gain  100
+net spindle-fb-volts    <= hm2_7i76e.0.7i76.0.0.analogin2
+net spindle-fb-volts    => spindle-fb-rpm-scale.in
+net spindle-fb-volts    => spindle-fb-rps-scale.in
+net spindle-vel-fb-rpm  <= spindle-fb-rpm-scale.out
+net spindle-vel-fb-rps  <= spindle-fb-rps-scale.out
+
+# Spindle at-speed gate. spindle.0.at-speed is what holds G-code execution
+# at the start of any spindle-synchronised move (the original symptom: M3
+# Sxxxx followed immediately by a cut would engage the workpiece before
+# the spindle was up to speed because at-speed was hard-coded TRUE).
+# near.0.out = (|in1 - in2| < max(|in1|, |in2|) * (scale - 1) + difference).
+# Measured steady-state |cmd - fb| across the working range:
+#   cmd=3000  err=438   (14.6%)   cmd=7400  err=567   (7.7%)
+#   cmd=4800  err=529   (11.0%)   cmd=8200  err=513   (6.3%)
+#   cmd=5800  err=675   (11.6%)   cmd=24000 err=939   (3.9%)
+# Pattern: a ~500-700 RPM bias at low cmd (likely ADC quantisation ~840
+# RPM/LSB on the 60k scale, plus Berges/Fm calibration drift) plus a slow
+# percentage slope. So a pure-percentage tolerance is too tight at low RPM
+# but loose at high RPM, while a pure-absolute tolerance is wrong the
+# other direction. The `near` comp's combined model fits naturally: scale
+# gives the high-RPM band (5% standard for spindle at-speed), difference
+# is the low-RPM floor that absorbs the constant bias.
+# scale=1.10 + difference=1000 (10% on top of the 1000 RPM floor; 5% was
+# tight enough that off-readings near steady-state still flickered the LED
+# in the working range, 10% absorbs that without compromising the gross-
+# failure check):
+#   cmd=0,     fb=0      -> range=1000 err=0     TRUE  (M5 unblocks)
+#   cmd=3000,  fb=2562   -> range=1300 err=438   TRUE
+#   cmd=8200,  fb=7687   -> range=1820 err=513   TRUE
+#   cmd=24000, fb=23061  -> range=3400 err=939   TRUE
+#   cmd=24000, fb=21000  -> range=3400 err=3000  TRUE  (12.5% short)
+#   cmd=24000, fb=5000   -> range=3400 err=19000 FALSE (gross fail caught)
+# The low-RPM band is loose in percentage terms but that just mirrors the
+# physical lag we actually measure; tighter just means LED never turns green
+# at low RPM. Safety failure mode (cutter engaging far below commanded RPM)
+# is gross-error and caught regardless. If the bias ever gets calibrated out
+# we can drop both knobs back down (~200 / 1.05 standard).
+# spindle-at-speed had `sets ... true` in Flexicam.hal:300; removed in this
+# commit so this net can claim the writer slot.
+loadrt near names=spindle-at-speed-near
+addf spindle-at-speed-near servo-thread
+setp spindle-at-speed-near.scale      1.10
+setp spindle-at-speed-near.difference 1000
+net spindle-vel-cmd-rpm-abs => spindle-at-speed-near.in1
+net spindle-vel-fb-rpm      => spindle-at-speed-near.in2
+net spindle-at-speed        <= spindle-at-speed-near.out
+
+# --------------------------------------------------------------------
+# A6-RS servos: enable, fault-reset, ready monitoring, pneumatics
+# Mesa field outputs 0-15 are sourcing by default (push +24V when ON). Every
+# output wired to an A6-RS digital input has to be SINKING instead: an A6-RS
+# DI sits at ~+24V via an internal 4.7k pull-up to COM+ and only activates
+# when pulled DOWN to COM-, so a sourcing output (pushing +24V into a pin
+# already at +24V) does nothing. A sinking output drives the DI directly --
+# no relay/optocoupler needed (an HL-54S relay was tried and removed; the only
+# fix needed was flipping these bits). Sinking output: ON = pulls the line to
+# GND, OFF = high-Z.
+#
+# Current bit assignment (TB6 = outputs 0-7, TB5 = outputs 8-15):
+#   output-01  S-ON (delayed) (TB6, SINKING)  -> all 4 drives' DI5 (CN1-33). 150 ms
+#                                               turn-off delay so motor stays
+#                                               electrically locked while Z brake
+#                                               mechanically grips on machine-off.
+#   output-05  alarm/f-reset  (TB6, SINKING)  -> all 4 drives' DI4 (CN1-8 ALM-RST), direct
+#   output-06  z-brake-coil   (TB6, SINKING)  -> Z motor brake coil low side; 24V on
+#                                               coil high side. ON=released, OFF=engaged.
+#                                               Bypasses A6-RS DO3; C05.10 dwell is
+#                                               replaced by the timedelay below.
+#   output-07  spindle-enable (TB6, sourcing) -> Berges ACM-D2 VFD ENABLE
+#   output-12  probe-lower   (TB5, sourcing)  -> touch-sensor deploy solenoid
+#   output-13  tool-release  (TB5, sourcing)  -> tool eject solenoid
+#   output-14  dust-cover-up (TB5, sourcing)  -> dust cover NC solenoid (energise = up)
+#   output-15  spindle-dust-air(TB5,sourcing) -> spindle dust-suction air-blow
+# COM- (CN1 pin 14) is common with Mesa field ground; each drive has the
+# CN1-17 -> CN1-11 jumper (internal +24V -> COM+ input common).
+#
+# Inductive solenoid loads (pneumatics) do NOT need flyback diodes:
+# 7I76EU output drivers have built-in clamp diodes to GND and VFIELD
+# (manual p.869-872). Max 500 mA per output (most 24 V pneumatic
+# solenoids draw 80-250 mA, single solenoid per output is fine).
+#
+# Sinking bit mask: 0x0062 = bit1 (S-ON) | bit5 (ALM-RST) | bit6 (z-brake).
+# Source mask has the matching bits cleared (output_source 0xFF9D).
+setp hm2_7i76e.0.7i76.0.0.output_source 0x0000FF9D
+setp hm2_7i76e.0.7i76.0.0.output_sink   0x00000062
+
+# S-ON delay + Z brake release.
+# Topology: A6-RS DO3 (brake-output) is NOT used; the brake coil is driven
+# directly from Mesa output-06 (sinking, 354 mA worst case, 500 mA per-pin
+# limit, integrated flyback clamps -- 7I76EU manual p.18 "VOLTAGE CLAMPS").
+# Because we bypass the drive's internal C05.10 gravity-dwell, we reproduce
+# it here: on machine-off the brake engages immediately (output-06 OFF) but
+# S-ON to the drives is held 150 ms longer (timedelay off-delay) so the
+# motor stays electrically locked while the spring brake mechanically grips.
+# Prevents Z gravity-drop on machine-off / e-stop / fault.
+loadrt timedelay names=son-delay,probe-debounce
+addf son-delay servo-thread
+setp son-delay.on-delay  0
+setp son-delay.off-delay 0.15
+# probe-debounce: addf / setp / wiring is down in the probe-in section.
+
+# Brake release (no delay): output-06 ON = coil energised = brake RELEASED.
+# Directly mirrors machine-is-enabled. (Previously wrapped in an or2 so a
+# PyVCP momentary "Release Z brake (hold)" button could force release for
+# bench validation; removed once the wiring proved reliable.)
+loadrt or2 names=y-fault-or
+
+net machine-is-enabled  => son-delay.in
+net machine-is-enabled  => hm2_7i76e.0.7i76.0.0.output-06
+
+# S-ON to all 4 drives' DI5 (CN1 pin 33) via the 150 ms turn-off delay.
+net son-to-drives <= son-delay.out
+net son-to-drives => hm2_7i76e.0.7i76.0.0.output-01
+
+# Drive fault reset: 0.5 s pulse on output-05 (sinking) -> all 4 drives' DI4
+# (ALM-RST, CN1 pin 8; needs C04.0C=2 / DI4 logic C04.0D=0 NO on each drive).
+# ALM-RST is edge-valid, and per the A6-RS manual a resettable fault clears
+# only with S-ON OFF *and* the cause already rectified -- so this is operator-
+# driven, NOT auto on machine-on (which asserts S-ON at the same instant).
+# Trigger = the AXIS PyVCP button "drive-reset"; that pin only exists once the
+# GUI is up, so alarm-reset.in is connected in custom_postgui.hal.
+loadrt oneshot names=alarm-reset
+addf alarm-reset servo-thread
+setp alarm-reset.width 0.5
+setp alarm-reset.rising 1
+setp alarm-reset.falling 0
+setp alarm-reset.retriggerable 1
+net alarm-reset-pulse   <= alarm-reset.out
+net alarm-reset-pulse   => hm2_7i76e.0.7i76.0.0.output-05
+
+# S-RDY monitoring (DO1, NO): HIGH when drive ready
+net x-servo-ready  <= hm2_7i76e.0.7i76.0.0.input-26
+net x2-servo-ready <= hm2_7i76e.0.7i76.0.0.input-24
+net y-servo-ready  <= hm2_7i76e.0.7i76.0.0.input-22
+net z-servo-ready  <= hm2_7i76e.0.7i76.0.0.input-20
+
+# Y servo supervision: fault joint.2 if the drive reports a fault (input-23, ALM)
+# OR drops out of the ready state (input-22, S-RDY). amp-fault-in only acts while
+# joint.2.amp-enable-out is true, so this does not block machine-on -- it aborts
+# the moment the drive is no longer OK, so the servo is only driven when ready.
+# NOTE on polarity: this assumes input-22 reads HIGH when the drive is ready
+# (hence input-22-not = "not ready"). If halmeter shows input-22 is LOW when the
+# drive is actually ready, swap input-22-not -> input-22 below. y-fault already
+# comes from input-23-not in Flexicam.hal.
+# or2 instance y-fault-or is loaded above (one loadrt per comp).
+addf y-fault-or servo-thread
+
+net y-not-ready  <= hm2_7i76e.0.7i76.0.0.input-22-not
+net y-not-ready  => y-fault-or.in0
+net y-fault      => y-fault-or.in1
+
+unlinkp joint.2.amp-fault-in
+net y-amp-fault  <= y-fault-or.out
+net y-amp-fault  => joint.2.amp-fault-in
+
+# Pneumatics block on TB5 (outputs 12-15). All sourcing relay-coil drives.
+# Signals here are all driven by PyVCP momentary buttons (writers in
+# custom_postgui.hal). When the M6 tool-change remap lands, the G-code writer
+# for tool-release will need to be OR'd with the GUI pin here. The Z touch-off
+# subroutine (subroutines/touchoff_z.ngc) uses the spindle/tool itself against
+# a fixed plate -- it does NOT drive probe-lower. No flyback diodes needed
+# (7I76EU outputs have built-in clamp diodes; 500 mA per output max).
+net probe-lower        => hm2_7i76e.0.7i76.0.0.output-12
+net tool-release       => hm2_7i76e.0.7i76.0.0.output-13
+net dust-cover-up      => hm2_7i76e.0.7i76.0.0.output-14
+net spindle-dust-air   => hm2_7i76e.0.7i76.0.0.output-15
+
+# VFD enable stays on TB6 (separate connector from the pneumatics block).
+net spindle-enable     => hm2_7i76e.0.7i76.0.0.output-07
+
+# Tool-length / probe contact sensor on input-08 (was input-00 placeholder of
+# unknown origin -- input-00 is now the spindle-mounted touch probe, see
+# touch-probe block below).
+#
+# Mesa 7I76EU inputs are fixed-sinking voltage-sensing inputs: 10 k nominal
+# to FGND, threshold ~14.4 V HIGH / ~9.6 V LOW at 24 V field. No internal
+# pull-up. So an NPN/open-collector sensor (signal floats while idle, pulls
+# to GND when triggered) MUST have an external pull-up to +24 V or both
+# states read LOW. Pick Rpu small enough that V_idle stays above 14.4 V:
+# with Rpu in parallel with the internal 10 k, V_idle = 24 V * 10k/(10k+Rpu).
+#   Rpu = 4.7 k  -> V_idle ~= 16.3 V (HIGH, ~1.6 V margin)  <-- use this
+#   Rpu = 2.2 k  -> V_idle ~= 19.7 V (HIGH, comfortable)
+#   Rpu = 10 k   -> V_idle ~= 12 V  (BELOW threshold -- won't work on EU)
+# Wiring: sensor +V -> +24 V, sensor 0 V -> FGND, sensor signal -> input-08
+# AND a 4.7 k resistor from input-08 to +24 V. Signal is active-low so we
+# read input-08-not for the active-high probe-in pin.
+# If the sensor turns out to be a 2-wire dry contact (no electronics) wire it
+# like the air switch below -- no pull-up needed.
+#
+# Asymmetric debounce: tool-touch is a metal-on-metal microswitch that bounces
+# on both close AND open. We use timedelay (on-delay/off-delay separately
+# settable) instead of the symmetric `debounce` so the rising edge passes
+# THROUGH instantly -- G38.2 latches on the first contact with zero added
+# overshoot, so minimum pressure on tool + spindle. Only the falling edge is
+# delayed (10 ms), which fixes the real failure mode: after G38.4 backs off,
+# the microswitch can bounce HIGH again as the tool clears, and the
+# subsequent G53 G0 lift would abort with "probe tripped during non-probe
+# move". 10 ms on the falling edge = 20 um of extra upward travel on G38.4
+# release, which doesn't matter.
+# probe-debounce is loaded together with son-delay at the top of this file
+# (loadrt timedelay names=son-delay,probe-debounce -- single loadrt per comp).
+addf probe-debounce servo-thread
+setp probe-debounce.on-delay  0
+setp probe-debounce.off-delay 0.010
+net  probe-raw  <= hm2_7i76e.0.7i76.0.0.input-08-not
+net  probe-raw  => probe-debounce.in
+net  probe-in   <= probe-debounce.out
+
+# Spindle-mounted touch probe contact sensor on input-00 (TB6).
+# 2-wire mechanical microswitch with NO/NC selector (set to NO). Wiring:
+# one side of the switch on +24 V, the other on Mesa input-00. With the
+# switch OPEN (no contact) the input floats and Mesa's internal 10 k pull-
+# down to FGND holds the line at 0 V (LOW). When the stylus touches and
+# the switch CLOSES, +24 V passes through to the input (HIGH). So
+# active-HIGH at the pin -- read input-00 directly to get TRUE on contact.
+# An earlier bench probe with the cable disconnected from Mesa read 24 V
+# idle / 0 V on contact, suggesting a strong upstream pull-up. Once the
+# Mesa 10 k pull-down loads the line that pull-up no longer dominates and
+# the open-switch level collapses to 0 V, so pin-level polarity is the
+# opposite of the open-circuit measurement.
+# Probe is physically capable of X/Y/Z touch but used for X/Y edge-finding
+# only -- Z height is measured via the fixed plate on input-08, which is
+# the only path that gives a usable Z reading (this stylus is on/off only,
+# no analog deflection). Display only for now; not wired to
+# motion.probe-input. When wiring this to G38.x XY workflows later, add
+# a debounce stage like probe-debounce at input-08 and OR with probe-in
+# into motion.probe-input via an or2 (only one writer per pin).
+net touch-probe     <= hm2_7i76e.0.7i76.0.0.input-00
+
+# Pneumatic probe-retracted reed/inductive sensor on input-01 (TB6).
+# 3-wire PNP (sourcing) sensor mounted at the TOP of the probe air cylinder
+# with an ~1 kΩ pull-down between its output (black) and 0 V (blue). PNP
+# topology: when active the sensor drives +24 V onto the output; when
+# inactive the output floats and the 1 k pull-down + Mesa's internal 10 k
+# pull-down hold the node at ~0 V. So:
+#   input-01 HIGH = piston AT TOP = probe RETRACTED  (safe to move XY)
+#   input-01 LOW  = piston extended (or broken wire / no 24 V)
+# No external pull-up needed (PNP drives the line actively when ON; the
+# 1 k pull-down plus Mesa 10 k = ~909 Ω effective, ~26 mA at saturation,
+# trivial for any industrial PNP sensor and well above the 14.4 V HIGH
+# threshold). Polarity unverified at the time of wiring -- if first bench
+# test shows it inverted (e.g. the sensor fires when extended), swap
+# input-01 for input-01-not below. Display only for now -- no automated
+# motion interlock yet.
+net probe-retracted <= hm2_7i76e.0.7i76.0.0.input-01
+
+# Air pressure: single 2-wire pressure switch between +24 V and input-09.
+# Switch is mechanically open (no continuity between its two terminals) when
+# the line is unpressurised and closes when pressure is sufficient. With
+# pressure: switch closed -> +24 V on input -> > 14.4 V threshold -> HIGH ->
+# air-ok TRUE. Without pressure (or with a broken wire): switch open ->
+# internal 10 k to FGND pulls input low -> LOW -> air-ok FALSE. Fail-safe in
+# both fault modes. No external resistor needed (Mesa input draws ~2.4 mA at
+# 24 V through its 10 k input impedance -- well under any dry-contact rating).
+# Displayed via PyVCP LED (see pyvcp_drivereset.xml + custom_postgui.hal);
+# no automated fault action yet.
+net air-ok          <= hm2_7i76e.0.7i76.0.0.input-09
+
+# --------------------------------------------------------------------
+# Xbox controller jog (Microsoft Xbox Series S|X via USB, xpad driver)
+#
+# Mapping (operator standing in front of the machine):
+#   Left stick UP    -> +X (gantry moves AWAY from operator)
+#   Left stick DOWN  -> -X (toward operator)
+#   Left stick LEFT  -> +Y
+#   Left stick RIGHT -> -Y
+#   D-pad up         -> digital jog Z+   (raise toward Z=0)
+#   D-pad down       -> digital jog Z-   (lower into the work)
+#   RT (right trigger) = speed scaler. Released = SLOW (50 mm/s) for fine
+#       positioning; fully pressed = FAST (200 mm/s, also [TRAJ] ceiling).
+#       Linear in between. So stick = where to go, trigger = how fast.
+#   RB (right bumper) = DEADMAN. Jog only happens while held.
+#
+# Why a deadman: this machine can do 250 mm/s on X/Y per [AXIS_*]MAX_VELOCITY;
+# a dropped or bumped controller pegging the stick would launch the gantry.
+# With the deadman wired, releasing RB forces halui.axis.jog-speed to 0,
+# which kills both analog and D-pad motion simultaneously (halui multiplies
+# analog by jog-speed and uses jog-speed for plus/minus too). To remove the
+# deadman, comment the "net joy-deadman" line and uncomment the
+# "setp joy-jog-speed-mux.sel 1" line below.
+#
+# Hot-plug: hal_input -K keeps the helper alive on disconnect, so the
+# controller can be unplugged/replugged without crashing LinuxCNC. If
+# the controller is not plugged in at startup, hal_input will fail to
+# bind but LinuxCNC still starts; replug and restart LinuxCNC to bind.
+#
+# Tuning:
+#   - joy-jog-speed-scale.gain/offset  -- changes the SLOW..FAST range
+#     mapped from RT travel (see comment near the scale loadrt below)
+#   - halui.axis.jog-deadband -- stick deadzone, 0.0..1.0
+#   - input.0.abs-x-scale / abs-y-scale (readable via halcmd show param)
+#     can be negated to flip axis polarity if push-forward goes the wrong
+#     direction. abs_hat0y already follows the kernel input convention
+#     (-1 = up, +1 = down) which is what we want for Z (up = raise).
+#
+# References:
+#   man hal_input, man halui
+#   https://forum.linuxcnc.org/49-basic-configuration/57259
+#   https://gist.github.com/deanstheory/689e13b473a109d32679f0f426efccad
+
+# Device matcher: hal_input takes a bareword substring of the kernel
+# device name (case-insensitive). Don't quote -- HAL's loadusr parser
+# doesn't strip quotes the way bash does. Kernel name on this box is
+# "Microsoft Xbox Series S|X Controller"; "Xbox" is unique enough.
+loadusr -W hal_input -KRAL Xbox
+
+# Variable jog speed from RT (right trigger). xpad reports the trigger
+# at input.0.abs-rz-position normalised to [-1, +1]: -1 released, +1 fully
+# pressed. We linearly map that to a jog speed via a scale component:
+#   out = in * gain + offset
+#   in=-1: out = -gain + offset = SLOW
+#   in=+1: out = +gain + offset = FAST
+# So gain = (FAST - SLOW) / 2 and offset = (FAST + SLOW) / 2.
+#
+# CRITICAL: halui.axis.jog-speed is in user-units PER MINUTE, same as
+# G-code F-words -- NOT per second. [TRAJ]MAX_LINEAR_VELOCITY is per
+# second though, so don't confuse the two. To get a desired mm/s out of
+# the jog, set the scale to mm/s * 60. Verified empirically: with
+# scale.out=200 and stick=1.0, joint.0.vel-cmd read 3.333 mm/s = 200/60.
+#
+# Target: SLOW = 50 mm/s = 3000 mm/min, FAST = 200 mm/s = 12000 mm/min.
+#   gain   = (12000 - 3000) / 2 = 4500
+#   offset = (12000 + 3000) / 2 = 7500
+# SLOW is the speed when ONLY RB is held (no RT). Set high enough that
+# you don't need to coordinate three controls one-handed to get usable
+# jog -- RT is just an optional booster up to FAST. FAST converted to
+# mm/s must not exceed [TRAJ]MAX_LINEAR_VELOCITY or motion will clip.
+# (loadrt scale names=... is hoisted up to the spindle feedback block above,
+# because that block needs scale instances before this one's addf runs.)
+addf joy-jog-speed-scale servo-thread
+setp joy-jog-speed-scale.gain   4500
+setp joy-jog-speed-scale.offset 7500
+net joy-rt-trigger   <= input.0.abs-rz-position
+net joy-rt-trigger   => joy-jog-speed-scale.in
+
+# Deadman gate on jog-speed via mux2: RB pressed -> in1 (scaler output),
+# RB released -> in0 (zero). Zero jog-speed disables both analog and
+# digital jog at the halui layer in one shot.
+loadrt mux2 names=joy-jog-speed-mux
+addf joy-jog-speed-mux servo-thread
+setp joy-jog-speed-mux.in0 0.0       # released: no motion
+net joy-jog-speed    <= joy-jog-speed-scale.out
+net joy-jog-speed    => joy-jog-speed-mux.in1   # held: speed = scaler(RT)
+
+net joy-deadman    <= input.0.btn-tr             # RB
+net joy-deadman    => joy-jog-speed-mux.sel
+# setp joy-jog-speed-mux.sel 1   # uncomment + comment the two lines above to remove deadman
+
+# Mode recovery: any MDI command (G91, G0 Xn, ...) leaves LinuxCNC in MDI
+# mode, and halui.axis.*.analog is ignored outside Manual mode -- so after
+# typing any MDI line the controller goes dead until the operator clicks
+# the manual area in AXIS. Wiring deadman to halui.mode.manual makes
+# grabbing the controller request manual mode automatically.
+# Safety: LinuxCNC rejects mode-change requests while a G-code program is
+# running or paused (Auto mode), so holding RB during a program does NOT
+# interrupt it. Mid-MDI requests are queued and applied when the MDI line
+# finishes (microseconds). Two locks gate motion regardless: RB also
+# enables jog-speed via the mux above, and halui.axis.*.analog is mode-
+# gated -- so an accidental RB during a program changes nothing.
+net joy-deadman    => halui.mode.manual
+
+# Drive halui.axis.jog-speed via the existing 'jog-speed' signal
+# (declared in Flexicam.hal:335 with halui.axis.jog-speed as reader, no writer).
+net jog-speed      <= joy-jog-speed-mux.out
+
+# Stick wobble / drift suppression. 0.15 = ignore anything within 15% of centre.
+setp halui.axis.jog-deadband 0.15
+
+# Left stick -> analog jog on X and Y. hal_input normalises raw counts via
+# input.0.abs-{x,y}-scale to [-1, +1]; halui multiplies that by jog-speed
+# for actual velocity.
+#
+# Three transformations vs the natural pin mapping:
+#   1. SWAP: stick UP/DOWN drives X (not Y), stick LEFT/RIGHT drives Y
+#      (not X). The mechanical X axis runs away from the operator -- it
+#      feels right that "pushing the stick forward" sends the gantry
+#      forward, not sideways.
+#   2. INVERT: negate both abs-*-scale params so:
+#        stick UP (kernel abs_y = -1) -> jog-x-analog = +1 -> +X
+#        stick LEFT (kernel abs_x = -1) -> jog-y-analog = +1 -> +Y
+#      Default scale is ~32767 (kernel range / 2); we set -32767.5 to flip.
+#   3. CIRCLE-TO-SQUARE shaping via lincurve: the Xbox stick has a physical
+#      circular gate, so at 45 deg full deflection each axis only reaches
+#      ~0.71 (= sin 45). Without reshaping each axis tops out at 71% of
+#      jog-speed on the diagonal, and the operator feels diagonal motion
+#      as slower than cardinal even though the combined vector is the same.
+#      The lincurve maps stick input to halui input with:
+#        - inner +-0.5: identity (preserves fine-jog feel)
+#        - +-0.5..+-0.707: linearly boosted to +-1.0 (the outer ring)
+#        - beyond +-0.707: clamped to +-1.0 (cardinal max == diagonal max)
+#      Net effect: full stick deflection commands per-axis full-speed in
+#      ALL directions; combined diagonal magnitude reaches sqrt(2) * jog-
+#      speed. Requires [TRAJ]MAX_LINEAR_VELOCITY >= sqrt(2) * (jog FAST in
+#      mm/s) or the planner clips diagonal motion back to the cap and the
+#      whole boost becomes invisible. Currently TRAJ=283, jog FAST=200 mm/s.
+#
+# PNCconf already pre-linked halui.axis.{x,y}.analog to bare signals
+# 'jog-x-analog' / 'jog-y-analog' in Flexicam.hal (see lines ~316/322)
+# with no writers attached. A HAL pin can only sit on one signal, so we
+# write into those existing signals instead of creating new ones.
+loadrt lincurve names=joy-x-shape,joy-y-shape personality=6,6
+addf joy-x-shape servo-thread
+addf joy-y-shape servo-thread
+# 6-point shaping curve (identical for X and Y):
+#   (-1.0, -1.0)   cardinal -X edge, output -1
+#   (-0.707,-1.0)  45 deg edge on -X side, BOOST to -1
+#   (-0.5, -0.5)   identity boundary on -X side
+#   ( 0.5,  0.5)   identity boundary on +X side
+#   ( 0.707, 1.0)  45 deg edge on +X side, BOOST to +1
+#   ( 1.0,  1.0)   cardinal +X edge, output +1
+setp joy-x-shape.x-val-00 -1.0
+setp joy-x-shape.y-val-00 -1.0
+setp joy-x-shape.x-val-01 -0.7071
+setp joy-x-shape.y-val-01 -1.0
+setp joy-x-shape.x-val-02 -0.5
+setp joy-x-shape.y-val-02 -0.5
+setp joy-x-shape.x-val-03  0.5
+setp joy-x-shape.y-val-03  0.5
+setp joy-x-shape.x-val-04  0.7071
+setp joy-x-shape.y-val-04  1.0
+setp joy-x-shape.x-val-05  1.0
+setp joy-x-shape.y-val-05  1.0
+setp joy-y-shape.x-val-00 -1.0
+setp joy-y-shape.y-val-00 -1.0
+setp joy-y-shape.x-val-01 -0.7071
+setp joy-y-shape.y-val-01 -1.0
+setp joy-y-shape.x-val-02 -0.5
+setp joy-y-shape.y-val-02 -0.5
+setp joy-y-shape.x-val-03  0.5
+setp joy-y-shape.y-val-03  0.5
+setp joy-y-shape.x-val-04  0.7071
+setp joy-y-shape.y-val-04  1.0
+setp joy-y-shape.x-val-05  1.0
+setp joy-y-shape.y-val-05  1.0
+
+setp input.0.abs-x-scale -32767.5
+setp input.0.abs-y-scale -32767.5
+# SWAP applied at the shape stage: lincurve X eats stick-Y axis, etc.
+net joy-stick-x-raw <= input.0.abs-y-position
+net joy-stick-x-raw => joy-x-shape.in
+net jog-x-analog    <= joy-x-shape.out
+net joy-stick-y-raw <= input.0.abs-x-position
+net joy-stick-y-raw => joy-y-shape.in
+net jog-y-analog    <= joy-y-shape.out
+
+# D-pad up/down -> Z digital jog. Same pattern: reuse 'jog-z-pos' /
+# 'jog-z-neg' that PNCconf already wired to halui.axis.z.{plus,minus}.
+# abs_hat0y is -1 on UP and +1 on DOWN per the Linux input convention;
+# we want UP = raise (Z+).
+net jog-z-pos      <= input.0.abs-hat0y-is-neg
+net jog-z-neg      <= input.0.abs-hat0y-is-pos

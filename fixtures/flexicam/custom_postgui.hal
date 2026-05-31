@@ -1,0 +1,90 @@
+# Include your custom_postgui HAL commands here
+# This file will not be overwritten when you run PNCconf again
+
+# --------------------------------------------------------------------
+# AXIS PyVCP panel (pyvcp_drivereset.xml, referenced from [DISPLAY] PYVCP=).
+# The pyvcp.* pins only exist after the GUI loads, so they are wired here.
+
+# "Reset drive faults" button -> alarm-reset oneshot (defined in custom.hal)
+# -> 0.5 s pulse on output-05 -> all 4 drives' DI4 (ALM-RST).
+# Use with the machine OFF after clearing the fault cause: ALM-RST is edge-
+# valid and the A6-RS only clears a resettable fault with S-ON OFF.
+net drive-reset-cmd      pyvcp.drive-reset      => alarm-reset.in
+
+# Feedback LED: lit while the reset pulse is on the wire.
+net alarm-reset-pulse    => pyvcp.drive-reset-active
+
+# Per-drive fault LEDs. Each drive's Fault DO (DO4, function 4, logic NC ->
+# C04.37=1) lands on a Mesa input; with NC logic input-2N reads HIGH when the
+# drive is OK, so input-2N-not = "this drive is faulted (or unpowered)".
+#   X -> input-27   X2 -> input-25   Y -> input-23   Z -> input-21
+# All four fault nets are sourced from those inputs in Flexicam.hal; here we
+# only add the LED readers (signals may have many readers, only one writer).
+net x-fault              => pyvcp.flt-x
+net x2-fault             => pyvcp.flt-x2
+net y-fault              => pyvcp.flt-y
+net z-fault              => pyvcp.flt-z
+
+# Per-drive S-RDY LEDs. Each drive's DO1 (function 1 = "Servo Ready", logic
+# NO -> C04.31=0) reads HIGH at the Mesa input when the drive is powered,
+# initialised, and waiting for S-ON (or already running). Sourced from the
+# x/x2/y/z-servo-ready signals in custom.hal:137-140 (input-26 / 24 / 22 / 20).
+# Polarity unconfirmed at the time of wiring; if a drive shows ready on its
+# panel but its LED stays gray, swap input-2X for input-2X-not in custom.hal.
+net x-servo-ready        => pyvcp.rdy-x
+net x2-servo-ready       => pyvcp.rdy-x2
+net y-servo-ready        => pyvcp.rdy-y
+net z-servo-ready        => pyvcp.rdy-z
+
+# Home switch status LEDs. The x/x2/y/z-home-sw signals are already sourced
+# from input-16..19-not in Flexicam.hal and consumed by joint.N.home-sw-in
+# (and re-used as neg/pos limits in custom.hal); add the LEDs as extra
+# consumers -- signals can have many readers, only one writer.
+net x-home-sw                                    => pyvcp.home-x
+net x2-home-sw                                   => pyvcp.home-x2
+net y-home-sw                                    => pyvcp.home-y
+net z-home-sw                                    => pyvcp.home-z
+
+# Pneumatics: air-ok (custom.hal, input-09) -> PyVCP LED. Green when the
+# pressure switch is closed, red otherwise. Display only.
+net air-ok                                       => pyvcp.air-ok
+
+# Probe cylinder retracted-position sensor (custom.hal, probe-retracted
+# <= input-01) -> PyVCP LED. Green = probe retracted at top of cylinder
+# (safe to move XY); red = extended or broken wire / no 24 V. Display
+# only; no automated motion interlock yet.
+net probe-retracted                              => pyvcp.probe-retracted
+
+# Tool touch-off plate (custom.hal, probe-in <= input-08-not) -> PyVCP LED.
+# Yellow while the tool is in contact with the plate. probe-in is also fed
+# to motion.probe-input from Flexicam.hal -- adding a second consumer here
+# is fine, only one writer per signal is required.
+net probe-in                                     => pyvcp.tool-touch
+
+# Spindle-mounted touch probe stylus (custom.hal, touch-probe <= input-00)
+# -> PyVCP LED. Yellow = stylus currently in contact; gray = idle. Display
+# only; not yet wired to motion.probe-input.
+net touch-probe                                  => pyvcp.touch-probe
+
+# Pneumatic manual override buttons (momentary; held = solenoid ON).
+# Each button is the sole writer of the matching signal that custom.hal
+# already routes to output-12..15. When the M6 tool-change remap lands, the
+# G-code writer for tool-release will need to be OR'd with the GUI pin here.
+net probe-lower         <= pyvcp.probe-lower-btn
+net tool-release        <= pyvcp.tool-release-btn
+net dust-cover-up       <= pyvcp.dust-cover-up-btn
+net spindle-dust-air    <= pyvcp.spindle-dust-air-btn
+
+# Z touch-off button -> halui MDI command 0 (defined in [HALUI] of Flexicam.ini)
+# -> "o<touchoff_z> call" -> subroutines/touchoff_z.ngc. Rising edge fires the
+# sub once; halui ignores the press if the machine isn't ON+IDLE.
+net touchoff-z-trigger  <= pyvcp.touchoff-z-btn
+net touchoff-z-trigger  => halui.mdi-command-00
+
+# Spindle readout (cmd vs measured). spindle-vel-cmd-rpm-abs is sourced in
+# Flexicam.hal (spindle.0.speed-out-abs); spindle-vel-fb-rpm + spindle-fb-volts
+# are sourced in custom.hal from the new analog feedback on input-02.
+net spindle-vel-cmd-rpm-abs => pyvcp.spindle-cmd-rpm
+net spindle-vel-fb-rpm      => pyvcp.spindle-fb-rpm
+net spindle-fb-volts        => pyvcp.spindle-fb-volts
+net spindle-at-speed        => pyvcp.spindle-at-speed-led

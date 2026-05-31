@@ -1,0 +1,36 @@
+// sudo halcompile --install float_delay.comp 
+component ycmd_delay "Fixed sample delay line for float signals";
+
+pin in  float in   "Input";
+pin out float out  "Output delayed by 'delay' samples";
+
+param rw s32 delay = 0 "Delay in samples (servo periods)";
+
+function _;
+license "GPL";
+;;
+
+// Maximum delay supported (in servo periods).
+// 200 samples @ 1ms servo period = 200ms max delay.
+#define MAX_DELAY 200
+
+static float buf[MAX_DELAY + 1];
+static int idx;
+
+FUNCTION(_) {
+    int d = delay;
+    if (d < 0) d = 0;
+    if (d > MAX_DELAY) d = MAX_DELAY;
+
+    // Write newest sample
+    buf[idx] = in;
+
+    // Read delayed sample
+    int out_idx = idx - d;
+    if (out_idx < 0) out_idx += (MAX_DELAY + 1);
+    out = buf[out_idx];
+
+    // Advance ring index
+    idx++;
+    if (idx > MAX_DELAY) idx = 0;
+}
