@@ -32,3 +32,10 @@ If a `.hal` file is shared by **two machines** (two `.ini` files), pin which one
 provides its context with the **LinuxCNC: Select Active Machine** command (or the
 `linuxcnc.activeMachine` setting). Diagnostics, hover, navigation and completion
 then use the pinned machine instead of an arbitrary one.
+
+## Credits
+
+This is an unofficial, community extension and is not affiliated with or endorsed
+by the LinuxCNC project. The icon is based on the LinuxCNC application icon
+([linuxcnc/linuxcnc](https://github.com/linuxcnc/linuxcnc), GPL-2.0), with an
+added "LSP" badge.

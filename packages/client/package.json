@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "PeterStolz",
   "license": "GPL-2.0-or-later",
+  "icon": "icon.png",
   "private": true,
   "type": "commonjs",
   "engines": {
