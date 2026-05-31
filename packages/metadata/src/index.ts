@@ -4,6 +4,21 @@ export const METADATA_VERSION = '0.1.0';
 export * from './types';
 export { MetadataIndex } from './db';
 export { assembleDB } from './assemble';
+export { hoverHal, hoverIni } from './providers/hover';
+
+import * as fs from 'fs';
+import { MetadataIndex } from './db';
+import { MetadataDB } from './types';
+
+/** Parse a metadata DB from JSON text. */
+export function parseDB(json: string): MetadataIndex {
+  return new MetadataIndex(JSON.parse(json) as MetadataDB);
+}
+
+/** Load a metadata DB from a JSON file on disk. */
+export function loadDBFromFile(file: string): MetadataIndex {
+  return parseDB(fs.readFileSync(file, 'utf8'));
+}
 
 // Extractors (used by the regenerate-db script and by the server's runtime
 // .comp overlay).

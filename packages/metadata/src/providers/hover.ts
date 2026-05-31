@@ -1,0 +1,254 @@
+import { Hover, MarkupKind, Range } from 'vscode-languageserver-types';
+import {
+  HalFile, HalStatement, HalToken, LineIndex,
+  LoadrtStatement, NetStatement, SetpStatement, SetsStatement,
+  IniFile,
+} from '@linuxcnc/core';
+import { MetadataIndex } from '../db';
+import { ComponentDef, PinDef, ParamDef } from '../types';
+
+function md(value: string, range?: Range): Hover {
+  return { contents: { kind: MarkupKind.Markdown, value }, range };
+}
+
+function inTok(t: HalToken | undefined, offset: number): t is HalToken {
+  return !!t && offset >= t.start && offset <= t.end;
+}
+
+// ---------------------------------------------------------------------------
+// HAL hover
+// ---------------------------------------------------------------------------
+
+export function hoverHal(
+  hal: HalFile,
+  lineIndex: LineIndex,
+  offset: number,
+  index: MetadataIndex,
+): Hover | null {
+  for (const stmt of hal.statements) {
+    if (offset < stmt.start || offset > stmt.end) continue;
+
+    if (inTok(stmt.commandToken, offset) && stmt.command) {
+      return commandHover(stmt.command, index, range(lineIndex, stmt.commandToken));
+    }
+
+    const h = hoverInStatement(stmt, lineIndex, offset, index);
+    if (h) return h;
+  }
+  return null;
+}
+
+function hoverInStatement(
+  stmt: HalStatement,
+  lineIndex: LineIndex,
+  offset: number,
+  index: MetadataIndex,
+): Hover | null {
+  switch (stmt.kind) {
+    case 'loadrt': {
+      const s = stmt as LoadrtStatement;
+      if (inTok(s.componentToken, offset)) {
+        if (s.componentToken.ini) return iniRefHover(s.componentToken, index, lineIndex);
+        return componentHover(s.componentToken.text, index, range(lineIndex, s.componentToken));
+      }
+      for (const mp of s.modparams) {
+        if (inTok(mp.valueToken, offset) && mp.valueToken!.ini) {
+          return iniRefHover(mp.valueToken!, index, lineIndex);
+        }
+      }
+      return null;
+    }
+    case 'net': {
+      const s = stmt as NetStatement;
+      if (inTok(s.signalToken, offset)) {
+        return signalHover(s.signalToken.text, range(lineIndex, s.signalToken));
+      }
+      for (const l of s.links) {
+        if (inTok(l.pinToken, offset)) {
+          if (l.pinToken.ini) return iniRefHover(l.pinToken, index, lineIndex);
+          return pinHover(l.pinToken.text, index, range(lineIndex, l.pinToken));
+        }
+      }
+      return null;
+    }
+    case 'setp': {
+      const s = stmt as SetpStatement;
+      if (inTok(s.pinToken, offset)) return pinHover(s.pinToken.text, index, range(lineIndex, s.pinToken));
+      if (inTok(s.valueToken, offset) && s.valueToken!.ini) return iniRefHover(s.valueToken!, index, lineIndex);
+      return null;
+    }
+    case 'sets': {
+      const s = stmt as SetsStatement;
+      if (inTok(s.signalToken, offset)) return signalHover(s.signalToken.text, range(lineIndex, s.signalToken));
+      if (inTok(s.valueToken, offset) && s.valueToken!.ini) return iniRefHover(s.valueToken!, index, lineIndex);
+      return null;
+    }
+    case 'addf':
+    case 'initf':
+    case 'delf': {
+      const s = stmt as unknown as Record<string, HalToken | undefined>;
+      if (inTok(s.functionToken, offset)) return functionHover(s.functionToken!.text, index, range(lineIndex, s.functionToken!));
+      if (inTok(s.threadToken, offset)) return md(`**thread** \`${s.threadToken!.text}\``, range(lineIndex, s.threadToken!));
+      return null;
+    }
+    case 'linkps':
+    case 'linksp':
+    case 'linkpp': {
+      const s = stmt as unknown as Record<string, HalToken | undefined>;
+      for (const key of ['firstToken', 'secondToken']) {
+        const t = s[key];
+        if (inTok(t, offset)) {
+          // pin for linkps.first/linkpp.*; otherwise a signal
+          if (stmt.kind === 'linkps' && key === 'secondToken') return signalHover(t!.text, range(lineIndex, t!));
+          if (stmt.kind === 'linksp' && key === 'firstToken') return signalHover(t!.text, range(lineIndex, t!));
+          return pinHover(t!.text, index, range(lineIndex, t!));
+        }
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+function range(lineIndex: LineIndex, t: HalToken): Range {
+  return lineIndex.rangeAt(t.start, t.end);
+}
+
+function commandHover(cmd: string, index: MetadataIndex, r: Range): Hover | null {
+  const c = index.command(cmd);
+  if (!c) return null;
+  return md(`\`\`\`\n${c.signature}\n\`\`\`\n\n${c.doc ?? ''}`, r);
+}
+
+function componentHover(name: string, index: MetadataIndex, r: Range): Hover | null {
+  const c = index.component(name);
+  if (!c) return null;
+  return md(renderComponent(c), r);
+}
+
+function renderComponent(c: ComponentDef): string {
+  const lines: string[] = [`### \`${c.name}\` (HAL component)`];
+  if (c.description) lines.push('', c.description);
+  else if (c.descriptionMd) lines.push('', c.descriptionMd.split('\n').slice(0, 6).join('\n'));
+  const counts: string[] = [];
+  if (c.pins.length) counts.push(`${c.pins.length} pins`);
+  if (c.params.length) counts.push(`${c.params.length} parameters`);
+  if (c.functions.length) counts.push(`${c.functions.length} functions`);
+  if (counts.length) lines.push('', `_${counts.join(' · ')}_`);
+  if (c.modparams.length) {
+    lines.push('', '**loadrt parameters:** ' + c.modparams.map((m) => `\`${m.name}\``).join(', '));
+  }
+  if (c.seeAlso) lines.push('', `See also: ${c.seeAlso}`);
+  return lines.join('\n');
+}
+
+function signalHover(name: string, r: Range): Hover {
+  return md(`**signal** \`${name}\``, r);
+}
+
+/** Resolve a full HAL pin name to its component + def using a best-effort
+ *  heuristic (the machine model in P3 makes this exact). */
+function resolvePin(
+  fullName: string,
+  index: MetadataIndex,
+): { comp: ComponentDef; member: PinDef | ParamDef; kind: 'pin' | 'param' } | null {
+  // Absolute builtins: joint.N.* / axis.L.* / motion.* / spindle.N.*
+  const builtin = index.builtinPin(fullName);
+  if (builtin) return { comp: builtin.comp, member: builtin.pin, kind: 'pin' };
+
+  const parts = fullName.split('.');
+  const comp = index.component(parts[0]);
+  if (!comp) return null;
+  // Try instanced (strip comp.<inst>.) then singleton (strip comp.)
+  for (const suffix of [parts.slice(2).join('.'), parts.slice(1).join('.')]) {
+    if (!suffix) continue;
+    const pin = comp.pins.find((p) => sameMember(p.name, suffix));
+    if (pin) return { comp, member: pin, kind: 'pin' };
+    const param = comp.params.find((p) => sameMember(p.name, suffix));
+    if (param) return { comp, member: param, kind: 'param' };
+  }
+  return null;
+}
+
+function sameMember(a: string, b: string): boolean {
+  return a.replace(/\d+/g, '#') === b.replace(/\d+/g, '#');
+}
+
+function pinHover(fullName: string, index: MetadataIndex, r: Range): Hover | null {
+  const res = resolvePin(fullName, index);
+  if (!res) return null;
+  const { comp, member, kind } = res;
+  const dir = 'dir' in member ? member.dir : '';
+  const head = `\`${fullName}\` — **${member.type} ${dir}** ${kind} of \`${comp.name}\``;
+  const lines = [head];
+  if (member.doc) lines.push('', member.doc);
+  return md(lines.join('\n'), r);
+}
+
+function functionHover(fullName: string, index: MetadataIndex, r: Range): Hover | null {
+  const parts = fullName.split('.');
+  const comp = index.component(parts[0]);
+  if (!comp) return null;
+  // global function (e.g. stepgen.make-pulses) or instance.suffix / bare instance
+  let fn = comp.functions.find((f) => f.global && f.name === fullName);
+  if (!fn) {
+    const suffix = parts.slice(2).join('.');
+    fn = comp.functions.find((f) => !f.global && f.name === suffix);
+  }
+  if (!fn) return null;
+  const fpNote = fn.fp === false ? ' (no floating point)' : fn.fp ? ' (uses floating point)' : '';
+  const lines = [`**function** \`${fullName}\`${fpNote} — provided by \`${comp.name}\``];
+  if (fn.doc) lines.push('', fn.doc);
+  return md(lines.join('\n'), r);
+}
+
+function iniRefHover(token: HalToken, index: MetadataIndex, lineIndex: LineIndex): Hover {
+  const { section, key } = token.ini!;
+  return md(renderIniKey(section, key, index), range(lineIndex, token));
+}
+
+function renderIniKey(section: string, key: string, index: MetadataIndex): string {
+  // Homing keys get the full docs section rendered.
+  const homing = index.homingDoc(key);
+  if (homing && /^JOINT_/i.test(section)) {
+    return `### \`[${section}]${key}\` (homing)\n\n${homing}`;
+  }
+  const def = index.iniKey(section, key);
+  const lines = [`### \`[${section}]${key}\``];
+  if (def?.type) lines.push('', `_type: ${def.type}_`);
+  if (def?.docMd) lines.push('', def.docMd);
+  else if (def?.doc) lines.push('', def.doc);
+  else lines.push('', `_INI variable referenced from HAL._`);
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// INI hover
+// ---------------------------------------------------------------------------
+
+export function hoverIni(
+  ini: IniFile,
+  lineIndex: LineIndex,
+  offset: number,
+  index: MetadataIndex,
+): Hover | null {
+  for (const section of ini.sections) {
+    if (offset >= section.name.start && offset <= section.name.end) {
+      const schema = index.iniSection(section.name.text);
+      const lines = [`### \`[${section.name.text}]\` section`];
+      if (schema?.docMd) lines.push('', schema.docMd);
+      return md(lines.join('\n'), lineIndex.rangeAt(section.name.start, section.name.end));
+    }
+    if (offset < section.start || offset > section.end) continue;
+    for (const entry of section.entries) {
+      if (offset >= entry.key.start && offset <= entry.key.end) {
+        return md(
+          renderIniKey(section.name.text, entry.key.text, index),
+          lineIndex.rangeAt(entry.key.start, entry.key.end),
+        );
+      }
+    }
+  }
+  return null;
+}

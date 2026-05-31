@@ -2,9 +2,24 @@
 // client package's dist/ so the produced .vsix is fully self-contained.
 const esbuild = require('esbuild');
 const path = require('path');
+const fs = require('fs');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+
+// Copy the bundled metadata DB next to the server bundle so the server can
+// load it from __dirname at runtime inside the packaged .vsix.
+function copyDb() {
+  const src = path.join(__dirname, '../metadata/data/db.json');
+  const destDir = path.join(__dirname, 'dist');
+  fs.mkdirSync(destDir, { recursive: true });
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(destDir, 'db.json'));
+    console.log('copied metadata db.json -> dist/db.json');
+  } else {
+    console.warn('WARNING: metadata db.json not found; run `npm run gen:db`');
+  }
+}
 
 /** @type {import('esbuild').BuildOptions} */
 const common = {
@@ -34,6 +49,7 @@ const builds = [
 ];
 
 async function run() {
+  copyDb();
   if (watch) {
     const ctxs = await Promise.all(builds.map((b) => esbuild.context(b)));
     await Promise.all(ctxs.map((c) => c.watch()));
