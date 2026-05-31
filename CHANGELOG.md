@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.3...v0.1.4) (2026-05-31)
+
+
+### Bug Fixes
+
+* **client:** clarify activeMachine setting and document multi-machine workflow ([#6](https://github.com/PeterStolz/linuxcnc-lsp/issues/6)) ([083a02d](https://github.com/PeterStolz/linuxcnc-lsp/commit/083a02d611a2528861de9ef4a768c75a9325c5dc))
+
 ## [0.1.3](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.2...v0.1.3) (2026-05-31)
 
 
