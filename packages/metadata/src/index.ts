@@ -15,6 +15,7 @@ export { buildMachineModel, resolveInstance, resolvePinDir } from './model/build
 export { crossFileDiagnostics, CrossFileOptions } from './model/diagnostics';
 export { definition, references, documentHighlights, locateHal, Located, iniRefsTo } from './model/navigation';
 export { prepareRename, rename, PrepareRenameResult } from './model/rename';
+export { codeActions } from './model/codeActions';
 
 import * as fs from 'fs';
 import { MetadataIndex } from './db';

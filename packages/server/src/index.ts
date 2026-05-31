@@ -9,7 +9,7 @@ import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@l
 import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
   definition, references, documentHighlights, MachineModel, iniRefsTo,
-  completeHal, completeIni, prepareRename, rename,
+  completeHal, completeIni, prepareRename, rename, codeActions,
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
@@ -73,6 +73,7 @@ connection.onInitialize((params): InitializeResult => {
         resolveProvider: false,
       },
       renameProvider: { prepareProvider: true },
+      codeActionProvider: true,
       semanticTokensProvider: {
         legend: { tokenTypes: [...SEMANTIC_TOKEN_TYPES], tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS] },
         full: true,
@@ -319,6 +320,17 @@ connection.onRenameRequest((params) => {
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return rename(model, doc.uri, doc.offsetAt(params.position), params.newName);
+});
+
+connection.onCodeAction((params) => {
+  if (!metadata) return [];
+  const uri = params.textDocument.uri;
+  if (!uri.toLowerCase().endsWith('.hal')) return [];
+  const diags = params.context.diagnostics;
+  if (!diags.length) return [];
+  const model = modelForHal(uri);
+  if (!model) return [];
+  return codeActions(model, uri, diags, metadata);
 });
 
 connection.languages.semanticTokens.on((params) => {
