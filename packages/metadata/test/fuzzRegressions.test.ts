@@ -3,7 +3,7 @@ import * as path from 'path';
 import { parseHal, parseIni, LineIndex } from '@linuxcnc/core';
 import {
   loadDBFromFile, MetadataIndex, buildMachineModel, crossFileDiagnostics,
-  hoverGcode, completeGcode, completeHal, completeIni, locateHal, references,
+  hoverGcode, completeGcode, completeHal, completeIni, locateHal, references, hoverHal,
   adocToMarkdown, HalFileInput, MachineModel,
 } from '../src/index';
 
@@ -147,6 +147,49 @@ describe('G-code multi-code / dash-range docs (fuzz #11/#12/#28)', () => {
   it('does not leave a leading dash in dash-range titles', () => {
     const v = ghover('M100', 'M100');
     expect(v).not.toMatch(/^###\s*`M100`\s*—\s*-/);
+  });
+});
+
+describe('audit accuracy fixes (#2/#4/#7)', () => {
+  const hh = (text: string, marker: string) => {
+    const off = text.indexOf(marker) + 2;
+    const h = hoverHal(parseHal(text), new LineIndex(text), off, index);
+    return h && typeof h.contents === 'object' && 'value' in h.contents ? (h.contents as { value: string }).value : '';
+  };
+
+  it('hal_parport pins resolve as parport.0.* (prefix strip + hyphenation)', () => {
+    expect(index.componentByPrefix('parport')?.name).toBe('hal_parport');
+    const m = model(undefined, [{ uri: 'a.hal', text: 'loadrt hal_parport cfg=0x378\nnet x parport.0.pin-01-out\n' }]);
+    expect([...m.instances.keys()]).toContain('parport.0');
+    expect(hh('net x parport.0.pin-01-out', 'pin-01-out')).toContain('hal_parport');
+  });
+
+  it('underscore component instances hyphenate (estop_latch -> estop-latch.0.*)', () => {
+    expect(hh('loadrt estop_latch\nnet e estop-latch.0.ok-in', 'ok-in')).toContain('estop_latch');
+  });
+
+  it('flags multipleWriters across num_chan= channels (was a false-negative)', () => {
+    const m = model(undefined, [{ uri: 'a.hal', text: 'loadrt pid num_chan=3\nnet foo pid.0.output pid.1.output\n' }]);
+    expect(codes(m, 'a.hal')).toContain('hal.signal.multipleWriters');
+  });
+
+  it('does not emit noReader/noWriter for an arrow-only unresolved pin', () => {
+    // unknowncomp is not in the DB -> direction unresolved; the `<=` arrow alone
+    // must NOT make it "confident" (that produced false dangling Hints).
+    const m = model(undefined, [{ uri: 'a.hal', text: 'net sig <= unknowncomp.0.out\n' }]);
+    const c = codes(m, 'a.hal');
+    expect(c).not.toContain('hal.signal.noReader');
+    expect(c).not.toContain('hal.signal.noWriter');
+  });
+});
+
+describe('G-code spaced-dash ranges (audit #5/#6)', () => {
+  it('includes interior plane codes G18/G19/G17.1/G18.1', () => {
+    for (const c of ['G18', 'G19', 'G17.1', 'G18.1']) expect(ghover(c, c)).toContain('Plane Select');
+  });
+  it('includes all probe variants G38.3/G38.4', () => {
+    expect(ghover('G38.3', 'G38.3')).toContain('Probing');
+    expect(ghover('G38.4', 'G38.4')).toContain('Probing');
   });
 });
 

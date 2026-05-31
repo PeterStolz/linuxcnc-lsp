@@ -25,17 +25,19 @@ export function extractGcode(gcodeAdoc: string, mcodeAdoc: string, otherAdoc: st
     const sections = parseAnchoredSections(adoc);
     for (const [anchor, ref] of refs) {
       const sec = sections.get(anchor);
+      // The quick-ref cell only yields the range endpoints for spaced-dash
+      // ranges ("G17 - G19.1"); the section's per-code bullets are the
+      // authoritative full set (G17,G18,G19,G17.1,G18.1,G19.1).
+      const codes = [...new Set([...ref.codes, ...(sec ? codesInBullets(sec.body) : [])])];
       const sharedDoc = sec ? buildDoc(sec.body) : undefined;
-      for (const code of ref.codes) {
+      const syn = sec ? firstFenced(sec.body) : undefined;
+      for (const code of codes) {
         // A section documenting several codes via a `* 'G94' - ...` bullet list
         // must give each code ITS bullet, not the whole (first code's) body.
         let docMd = sharedDoc;
-        if (sec && ref.codes.length > 1) {
+        if (sec && codes.length > 1) {
           const bullet = perCodeBullet(code, sec.body);
-          if (bullet) {
-            const syn = firstFenced(sec.body);
-            docMd = [syn ? '```ngc\n' + syn + '\n```' : '', adocToMarkdown(bullet)].filter(Boolean).join('\n\n');
-          }
+          if (bullet) docMd = [syn ? '```ngc\n' + syn + '\n```' : '', adocToMarkdown(bullet)].filter(Boolean).join('\n\n');
         }
         put(code, { title: ref.title, docMd });
       }
@@ -178,6 +180,17 @@ function expandCodes(token: string): string[] {
   const out: string[] = [];
   for (let n = startInt; n <= endInt; n++) out.push(letter + n);
   for (let d = 1; d <= endDec; d++) out.push(`${letter}${endInt}.${d}`);
+  return out;
+}
+
+/** All G/M codes that head a `* 'G94' - ...` body bullet (the authoritative
+ *  member list for a multi-code section). */
+function codesInBullets(body: string[]): string[] {
+  const out: string[] = [];
+  for (const line of body) {
+    const m = /^\s*\*\s*['`]?([A-Za-z]\d+(?:\.\d+)?)['`]?[\s.,'`-]/.exec(line);
+    if (m && CODE_RE.test(m[1])) out.push(m[1].toUpperCase());
+  }
   return out;
 }
 

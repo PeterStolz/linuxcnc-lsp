@@ -5,7 +5,7 @@ import {
   HalFile, LineIndex, IniFile, IniSection,
   HAL_COMMANDS, LoadrtStatement,
 } from '@linuxcnc/core';
-import { MetadataIndex } from '../db';
+import { MetadataIndex, halInstancePrefix } from '../db';
 import { MachineModel } from '../model/types';
 import { ComponentDef, PinDef, ParamDef } from '../types';
 
@@ -522,9 +522,10 @@ function instances(ctx: HalCompletionContext): InstInfo[] {
     const s = stmt as LoadrtStatement;
     const comp = s.componentToken;
     if (!comp || comp.ini) continue;
+    const hp = halInstancePrefix(comp.text);
     if (s.names?.length) for (const n of s.names.slice(0, INSTANCE_CAP)) reg(n, comp.text);
-    else if (typeof s.count === 'number') for (let i = 0; i < Math.min(s.count, INSTANCE_CAP); i++) reg(`${comp.text}.${i}`, comp.text);
-    else { reg(`${comp.text}.0`, comp.text); reg(comp.text, comp.text); }
+    else if (typeof s.count === 'number') for (let i = 0; i < Math.min(s.count, INSTANCE_CAP); i++) reg(`${hp}.${i}`, comp.text);
+    else { reg(`${hp}.0`, comp.text); reg(hp, comp.text); }
   }
   return out;
 }

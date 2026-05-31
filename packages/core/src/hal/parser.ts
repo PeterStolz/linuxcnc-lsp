@@ -146,7 +146,9 @@ function parseLoadrt(
       if (lname === 'names' && valueToken) {
         namesToken = valueToken;
         names = valueToken.text.split(',').map((s) => s.trim()).filter(Boolean);
-      } else if (lname === 'count' && valueToken) {
+      } else if ((lname === 'count' || lname === 'num_chan') && valueToken) {
+        // `count=` is the generic halcmd keyword; `num_chan=` is the per-channel
+        // count used by pid/encoder/siggen/counter. Both set the instance count.
         countToken = valueToken;
         const n = parseInt(valueToken.text, 10);
         // Clamp to a sane bound: an absurd count (typo) must never drive an
@@ -160,11 +162,27 @@ function parseLoadrt(
     // lone words / stray tokens are ignored (tolerant)
   }
 
+  // stepgen/pwmgen and friends size their instance count by the length of an
+  // array modparam (e.g. `step_type=0,0,0` -> 3 instances). Derive it when no
+  // explicit count=/num_chan=/names= was given.
+  if (count === undefined && !names) {
+    let arr = 0;
+    for (const mp of modparams) {
+      if (ARRAY_COUNT_MODPARAMS.has(mp.nameToken.text.toLowerCase()) && mp.valueToken) {
+        arr = Math.max(arr, mp.valueToken.text.split(',').filter((s) => s.trim().length).length);
+      }
+    }
+    if (arr > 0) count = Math.min(arr, MAX_INSTANCE_COUNT);
+  }
+
   return {
     kind: 'loadrt', command: 'loadrt', commandToken, ...base,
     componentToken, modparams, names, namesToken, count, countToken, configToken,
   };
 }
+
+/** loadrt modparams whose comma-separated length sets the instance count. */
+const ARRAY_COUNT_MODPARAMS: ReadonlySet<string> = new Set(['step_type', 'ctrl_type', 'output_type']);
 
 function parseNet(
   commandToken: HalToken,

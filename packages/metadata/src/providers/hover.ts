@@ -204,7 +204,7 @@ function resolvePin(
   if (builtin) return { comp: builtin.comp, member: builtin.pin, kind: 'pin' };
 
   const parts = fullName.split('.');
-  const comp = index.component(parts[0]);
+  const comp = index.componentByPrefix(parts[0]);
   if (!comp) return null;
   // Try instanced (strip comp.<inst>.) then singleton (strip comp.)
   for (const suffix of [parts.slice(2).join('.'), parts.slice(1).join('.')]) {
@@ -234,7 +234,7 @@ function pinHover(fullName: string, index: MetadataIndex, r: Range): Hover | nul
 
 function functionHover(fullName: string, index: MetadataIndex, r: Range): Hover | null {
   const parts = fullName.split('.');
-  const comp = index.component(parts[0]);
+  const comp = index.componentByPrefix(parts[0]);
   if (!comp) return null;
   // global function (e.g. stepgen.make-pulses) or instance.suffix / bare instance
   let fn = comp.functions.find((f) => f.global && f.name === fullName);

@@ -20384,6 +20384,16 @@
    "title": "Coordinated Helical Motion at Feed Rate",
    "docMd": "```ngc\nG2 or G3 axes offsets (center format)\nG2 or G3 axes R- (radius format)\nG2 or G3 offsets|R- <P-> (full circles)\n```\n\nA circular or helical arc is specified using either 'G2' (clockwise arc) or 'G3' (counterclockwise arc) at the current feed rate. The direction (CW, CCW) is as viewed from the positive end of the axis about which the circular motion occurs."
   },
+  "R1": {
+   "code": "R1",
+   "title": "Coordinated Helical Motion at Feed Rate",
+   "docMd": "```ngc\nG2 or G3 axes offsets (center format)\nG2 or G3 axes R- (radius format)\nG2 or G3 offsets|R- <P-> (full circles)\n```\n\n'r1' - radius from the start position to the center"
+  },
+  "R2": {
+   "code": "R2",
+   "title": "Coordinated Helical Motion at Feed Rate",
+   "docMd": "```ngc\nG2 or G3 axes offsets (center format)\nG2 or G3 axes R- (radius format)\nG2 or G3 offsets|R- <P-> (full circles)\n```\n\n'r2' - radius from the end position to the center"
+  },
   "G4": {
    "code": "G4",
    "title": "Dwell",
@@ -20464,6 +20474,26 @@
    "title": "Plane Select",
    "docMd": "'G19.1' - VW"
   },
+  "G18": {
+   "code": "G18",
+   "title": "Plane Select",
+   "docMd": "'G18' - ZX"
+  },
+  "G19": {
+   "code": "G19",
+   "title": "Plane Select",
+   "docMd": "'G19' - YZ"
+  },
+  "G17.1": {
+   "code": "G17.1",
+   "title": "Plane Select",
+   "docMd": "'G17.1' - UV"
+  },
+  "G18.1": {
+   "code": "G18.1",
+   "title": "Plane Select",
+   "docMd": "'G18.1' - WU"
+  },
   "G20": {
    "code": "G20",
    "title": "Set Units of Measure",
@@ -20513,6 +20543,16 @@
    "code": "G38.5",
    "title": "Probing",
    "docMd": "```ngc\nG38.n axes\n```\n\n'G38.5' - probe away from workpiece, stop on loss of contact"
+  },
+  "G38.3": {
+   "code": "G38.3",
+   "title": "Probing",
+   "docMd": "```ngc\nG38.n axes\n```\n\n'G38.3' - probe toward workpiece, stop on contact"
+  },
+  "G38.4": {
+   "code": "G38.4",
+   "title": "Probing",
+   "docMd": "```ngc\nG38.n axes\n```\n\n'G38.4' - probe away from workpiece, stop on loss of contact, signal error if failure"
   },
   "G40": {
    "code": "G40",
@@ -20796,8 +20836,8 @@
   },
   "M1": {
    "code": "M1",
-   "title": "Program Pause",
-   "docMd": "'M1' - pause a running program temporarily if the optional stop switch is on. LinuxCNC remains in the Auto Mode so MDI and other manual actions are not enabled. Pressing the resume button will restart the program at the following line."
+   "title": "User Defined M-Codes",
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\n'M1--' - an integer in the range of 100 - 199."
   },
   "M2": {
    "code": "M2",

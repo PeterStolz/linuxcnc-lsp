@@ -74,6 +74,16 @@ describe('G-code exponent codes (fuzz #19)', () => {
   });
 });
 
+describe('instance-count keywords (audit #1/#4/#9)', () => {
+  const count = (t: string) => (parseHal(t).statements[0] as { count?: number }).count;
+  it('num_chan= sets the instance count (pid/encoder)', () => expect(count('loadrt pid num_chan=3')).toBe(3));
+  it('step_type= array length sets the count (stepgen)', () => expect(count('loadrt stepgen step_type=0,0,0')).toBe(3));
+  it('ctrl_type= array length too', () => expect(count('loadrt stepgen ctrl_type=v,p')).toBe(2));
+  it('output_type= array length (pwmgen)', () => expect(count('loadrt pwmgen output_type=1,1,2')).toBe(3));
+  it('explicit count= still works and is preferred', () => expect(count('loadrt pid count=5')).toBe(5));
+  it('no count keyword -> undefined (singleton)', () => expect(count('loadrt and2')).toBeUndefined());
+});
+
 describe('INI value continuation (fuzz #17/#18)', () => {
   it('keeps a continued value span inside the document', () => {
     const text = '[X]\nKEY = a \\\n  b \\\n  c\n';

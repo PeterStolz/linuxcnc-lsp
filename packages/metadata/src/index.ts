@@ -2,7 +2,7 @@
 export const METADATA_VERSION = '0.1.0';
 
 export * from './types';
-export { MetadataIndex } from './db';
+export { MetadataIndex, halInstancePrefix } from './db';
 export { assembleDB } from './assemble';
 export { hoverHal, hoverIni } from './providers/hover';
 export {

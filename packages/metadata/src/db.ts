@@ -4,10 +4,35 @@ import { MetadataDB, ComponentDef, PinDef, ParamDef, FuncDef, IniSectionSchema, 
  * Wraps a MetadataDB with lookup helpers and supports overlaying components
  * parsed from workspace-local .comp files (custom components).
  */
+/** The HAL instance-name prefix halcompile generates for a loadrt module:
+ *  it strips a leading `hal_` and replaces `_` with `-` (e.g. `hal_parport` ->
+ *  `parport`, `estop_latch` -> `estop-latch`). Explicit `names=` are NOT
+ *  transformed (halcompile registers those verbatim). */
+export function halInstancePrefix(comp: string): string {
+  return (comp.startsWith('hal_') ? comp.slice(4) : comp).replace(/_/g, '-');
+}
+
 export class MetadataIndex {
   private overlay = new Map<string, ComponentDef>();
+  /** HAL instance prefix -> DB component key, for prefixes that differ from the
+   *  loadrt module name (e.g. `parport` -> `hal_parport`). */
+  private readonly byPrefix = new Map<string, string>();
 
-  constructor(private readonly db: MetadataDB) {}
+  constructor(private readonly db: MetadataDB) {
+    for (const name of Object.keys(db.components)) {
+      const p = halInstancePrefix(name);
+      if (p !== name && !this.byPrefix.has(p)) this.byPrefix.set(p, name);
+    }
+  }
+
+  /** Resolve a component from an instance-name prefix segment, accounting for
+   *  the hal_/underscore transform (`parport.0.*` comes from `loadrt hal_parport`). */
+  componentByPrefix(segment: string): ComponentDef | undefined {
+    const direct = this.component(segment);
+    if (direct) return direct;
+    const key = this.byPrefix.get(segment);
+    return key ? this.component(key) : undefined;
+  }
 
   get source() {
     return this.db.source;

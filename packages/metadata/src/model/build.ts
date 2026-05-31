@@ -2,7 +2,7 @@ import {
   HalToken, LoadrtStatement, NetStatement, SetsStatement, NewsigStatement,
   LinkStatement, AliasStatement,
 } from '@linuxcnc/core';
-import { MetadataIndex } from '../db';
+import { MetadataIndex, halInstancePrefix } from '../db';
 import { HalFileInput, IniFileInput, MachineModel, InstanceInfo, SignalNode, PinRef, Loc } from './types';
 
 export interface BuildInputs {
@@ -32,13 +32,17 @@ export function buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaq
       const register = (name: string) => {
         if (!instances.has(name)) instances.set(name, { name, comp: comp.text, loadLoc });
       };
+      // Auto-generated instance names use halcompile's HAL prefix (hal_ stripped,
+      // _ -> -); explicit names= are registered verbatim. InstanceInfo.comp stays
+      // the raw loadrt name so DB pin lookups (keyed by the module name) still hit.
+      const hp = halInstancePrefix(comp.text);
       if (s.names && s.names.length) {
         for (const n of s.names) register(n);
       } else if (typeof s.count === 'number') {
-        for (let i = 0; i < s.count; i++) register(`${comp.text}.${i}`);
+        for (let i = 0; i < s.count; i++) register(`${hp}.${i}`);
       } else {
-        register(`${comp.text}.0`);
-        register(comp.text); // singleton fallback
+        register(`${hp}.0`);
+        register(hp); // singleton fallback
       }
     }
   }
@@ -92,7 +96,11 @@ export function buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaq
           for (const atom of mergePinAtoms(s.links)) {
             const dir = atom.hasIni ? undefined : resolveDir(atom.text);
             const role = pinRole2(atom.arrow, dir);
-            const confident = !!atom.arrow || dir !== undefined;
+            // Confident ONLY when the direction was resolved from metadata. An
+            // arrow alone is a cosmetic hint (halcmd ignores it); if we could not
+            // resolve the pin, the signal is incomplete and the no-writer/
+            // no-reader rules must stay silent (avoids false dangling Hints).
+            const confident = dir !== undefined;
             const type = atom.hasIni ? undefined : resolveType(atom.text, aliases, instances, index);
             const ref: PinRef = {
               fullName: atom.text,
@@ -111,8 +119,10 @@ export function buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaq
             const n = sig(s.secondToken.text);
             n.occurrences.push(loc(s.secondToken));
             n.firstDef ??= loc(s.secondToken);
+            const fdir = resolveDir(s.firstToken.text);
             const role = pinRole(s.firstToken.text, s.arrow, resolveDir);
-            (role === 'writer' ? n.writers : n.readers).push({ fullName: s.firstToken.text, loc: loc(s.firstToken), role, resolved: resolveDir(s.firstToken.text) !== undefined });
+            (role === 'writer' ? n.writers : n.readers).push({ fullName: s.firstToken.text, loc: loc(s.firstToken), role, resolved: fdir !== undefined });
+            if (fdir === undefined) n.hasUnresolved = true;
           }
           break;
         }
@@ -122,8 +132,10 @@ export function buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaq
             const n = sig(s.firstToken.text);
             n.occurrences.push(loc(s.firstToken));
             n.firstDef ??= loc(s.firstToken);
+            const sdir = resolveDir(s.secondToken.text);
             const role = pinRole(s.secondToken.text, s.arrow, resolveDir);
-            (role === 'writer' ? n.writers : n.readers).push({ fullName: s.secondToken.text, loc: loc(s.secondToken), role, resolved: resolveDir(s.secondToken.text) !== undefined });
+            (role === 'writer' ? n.writers : n.readers).push({ fullName: s.secondToken.text, loc: loc(s.secondToken), role, resolved: sdir !== undefined });
+            if (sdir === undefined) n.hasUnresolved = true;
           }
           break;
         }
