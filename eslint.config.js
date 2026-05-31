@@ -4,7 +4,7 @@ const tsparser = require('@typescript-eslint/parser');
 
 module.exports = [
   {
-    ignores: ['**/dist/**', '**/out/**', '**/node_modules/**', '**/*.d.ts', '**/.vscode-test/**'],
+    ignores: ['**/dist/**', '**/out/**', '**/node_modules/**', '**/*.d.ts', '**/.vscode-test/**', '**/.fuzzwork/**'],
   },
   {
     files: ['**/*.ts'],

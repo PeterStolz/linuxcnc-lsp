@@ -38,13 +38,28 @@ Monorepo (npm workspaces):
 
 ## Development
 
+This repo uses **pnpm** (v10+; pinned via `packageManager`). With a recent Node,
+`corepack enable` makes the right pnpm available automatically.
+
 ```sh
-npm install
-npm run typecheck   # tsc -b project references
-npm test            # vitest unit + golden-corpus tests
-npm run lint
-npm run gen:db      # regenerate the metadata DB from the pinned LinuxCNC checkout
-npm run package     # build the .vsix
+pnpm install
+pnpm run typecheck   # tsc -b project references
+pnpm test            # vitest unit + golden-corpus tests
+pnpm run lint
+pnpm run gen:db      # regenerate the metadata DB from the pinned LinuxCNC checkout
+pnpm run package     # build the .vsix
 ```
 
 See `../linuxcnc/.claude` plan or `docs/` for the full feature spec.
+
+## License
+
+Licensed under the **GNU General Public License v2.0 or later** (GPL-2.0-or-later);
+see [`LICENSE`](./LICENSE).
+
+This project bundles a metadata database (`packages/metadata/data/`) extracted
+from the **LinuxCNC** source tree and documentation (see `metadata-source.json`),
+which is itself licensed under the GNU GPL. Component, pin, INI and G-code
+descriptions are derived from LinuxCNC's man pages, `.comp` files and docs —
+© the LinuxCNC project and contributors. The GPL is used here to stay fully
+compatible with that upstream material.

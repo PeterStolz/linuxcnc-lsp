@@ -1,0 +1,62 @@
+# See https://pre-commit.com. Install once with `pre-commit install`.
+# CI runs `pre-commit run --all-files` (see .github/workflows/ci.yml).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        # Generated files (db.json via `pnpm run gen:db`, grammars) and test
+        # fixtures (verbatim real-world LinuxCNC files — whitespace is load-bearing).
+        exclude: &generated_and_fixtures |
+          (?x)^(
+            packages/metadata/data/db\.json|
+            packages/client/grammars/.*\.json|
+            fixtures/.*|
+            packages/.*/test/fixtures/.*
+          )$
+      - id: trailing-whitespace
+        exclude: *generated_and_fixtures
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-json
+        exclude: *generated_and_fixtures
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        exclude: *generated_and_fixtures
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        # Upstream hook is `gitleaks protect --staged`, which only scans the
+        # git index. `dir` scans the working tree so already-committed or
+        # gitignored secrets still get flagged. Allowlist is in .gitleaks.toml.
+        entry: gitleaks dir --redact=75 --verbose
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (pnpm run lint)
+        entry: pnpm run lint
+        language: system
+        files: \.(c|m)?[jt]s$
+        pass_filenames: false
+      # Run the unit + golden-corpus suite on every commit (it's fast, ~0.5s).
+      # Also runs in the CI `pre-commit` job (default stage), alongside the
+      # dedicated `unit` job.
+      - id: vitest
+        name: vitest (unit + golden corpus)
+        entry: pnpm test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "changelog-path": "CHANGELOG.md",
+      "component": "linuxcnc-lsp",
+      "include-component-in-tag": false,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "draft": false,
+      "prerelease": false,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "packages/client/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

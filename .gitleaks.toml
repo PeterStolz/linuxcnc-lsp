@@ -1,0 +1,24 @@
+# gitleaks config — extends the bundled ruleset, adds allowlists for this repo.
+# Run via the pre-commit hook (`gitleaks dir`), which scans the working tree.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated metadata DB + raw dumps, build output, fixtures and Claude scratch — high-entropy text, not secrets"
+
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)out/''',
+  '''(^|/)\.vscode-test/''',
+  '''(^|/)coverage/''',
+  '''\.vsix$''',
+  '''(^|/)package-lock\.json$''',
+  # Bundled metadata DB and the ground-truth halrun dumps it is built from:
+  # these are extracted LinuxCNC docs/symbols, not credentials.
+  '''(^|/)packages/metadata/data/db\.json$''',
+  '''(^|/)packages/metadata/data/raw/''',
+  # Test fixtures (sample HAL/INI/G-code machine configs).
+  '''(^|/)fixtures/''',
+  '''(^|/)\.claude/''',
+]

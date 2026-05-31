@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "description": "Renovate config for linuxcnc-lsp: npm workspaces + GitHub Actions",
+  "labels": ["dependencies"],
+  "schedule": ["before 9am on sunday"],
+  "timezone": "Europe/Berlin",
+  "automerge": false,
+  "minimumReleaseAge": "7 days",
+  "gitAuthor": "Renovate Bot <renovate@detesia.com>",
+  "separateMajorMinor": true,
+  "enabledManagers": ["npm", "github-actions"],
+  "packageRules": [
+    {
+      "description": "Group non-major npm devDependency bumps into one PR",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dev (non-major)"
+    },
+    {
+      "description": "Group the ESLint / typescript-eslint stack",
+      "matchPackageNames": [
+        "eslint",
+        "/^@typescript-eslint//",
+        "/^@eslint//"
+      ],
+      "groupName": "eslint"
+    },
+    {
+      "description": "Group the TypeScript + tsx + Vitest toolchain",
+      "matchPackageNames": [
+        "typescript",
+        "tsx",
+        "vitest",
+        "/^@vitest//"
+      ],
+      "groupName": "ts-toolchain"
+    },
+    {
+      "description": "Group all GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "@types/vscode pins the minimum supported VS Code (engines.vscode); bump only on purpose",
+      "matchPackageNames": ["@types/vscode", "@vscode/test-electron"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Grandfathered gitleaks findings — known false positives or pre-existing
+# committed strings that pre-date the hook. Each line is a fingerprint
+# (`<file>:<rule>:<line>`) emitted by `gitleaks dir --verbose`.
+#
+# New secrets are NOT auto-grandfathered: add them here only with a written
+# justification, and prefer rotating + removing the secret instead.

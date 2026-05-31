@@ -2,6 +2,7 @@
   "name": "@linuxcnc/metadata",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-2.0-or-later",
   "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,7 +10,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@linuxcnc/core": "*",
+    "@linuxcnc/core": "workspace:*",
     "vscode-languageserver-types": "^3.17.5"
   }
 }

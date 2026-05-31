@@ -2,14 +2,15 @@
   "name": "@linuxcnc/server",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-2.0-or-later",
   "type": "commonjs",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -b"
   },
   "dependencies": {
-    "@linuxcnc/core": "*",
-    "@linuxcnc/metadata": "*",
+    "@linuxcnc/core": "workspace:*",
+    "@linuxcnc/metadata": "workspace:*",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.0.8"

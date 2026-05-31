@@ -7,51 +7,51 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit:
-    name: Lint, typecheck, unit + golden corpus
+  checks:
+    name: pre-commit (format, actionlint, gitleaks, eslint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: pre-commit/action@v3.0.1
+
+  unit:
+    name: Typecheck, unit + golden corpus, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run build
 
   e2e:
     name: VSCode integration tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
       - name: Run @vscode/test-electron under xvfb
-        run: xvfb-run -a npm run test:e2e --workspace=linuxcnc-lsp
-        # test:e2e is added in the P6 milestone; tolerated as a no-op until then.
+        run: xvfb-run -a pnpm --filter linuxcnc-lsp run --if-present test:e2e
+        # test:e2e is added in the P6 milestone; --if-present + continue-on-error
+        # keep this a no-op until then.
         continue-on-error: true
-
-  package:
-    name: Package VSIX
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [unit]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npx --workspace=linuxcnc-lsp @vscode/vsce package --no-dependencies -o linuxcnc-lsp.vsix
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linuxcnc-lsp-vsix
-          path: linuxcnc-lsp.vsix
