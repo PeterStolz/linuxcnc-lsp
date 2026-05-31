@@ -6,3 +6,4 @@ out/
 coverage/
 .vscode-test/
 .DS_Store
+*.vsix

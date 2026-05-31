@@ -12,7 +12,15 @@
   },
   "categories": ["Programming Languages", "Linters"],
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "repository": { "type": "git", "url": "https://github.com/PeterStolz/linuxcnc-lsp" },
+  "activationEvents": [
+    "onLanguage:hal",
+    "onLanguage:linuxcnc-ini",
+    "onLanguage:gcode",
+    "onLanguage:ini",
+    "onLanguage:plaintext",
+    "workspaceContains:**/*.hal"
+  ],
   "contributes": {
     "languages": [
       {
@@ -24,8 +32,7 @@
       {
         "id": "linuxcnc-ini",
         "aliases": ["LinuxCNC INI"],
-        "extensions": [".ini"],
-        "filenames": [],
+        "comment": "No .ini extension binding on purpose: a LinuxCNC machine INI is detected by content (see linuxcnc.iniDetection) so we do not hijack unrelated .ini files.",
         "configuration": "./grammars/ini.language-configuration.json"
       },
       {
@@ -64,6 +71,17 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Override path to a metadata JSON database (regenerated from a specific LinuxCNC version). Empty uses the bundled database."
+        },
+        "linuxcnc.iniDetection": {
+          "type": "string",
+          "enum": ["auto", "extension", "off"],
+          "default": "auto",
+          "markdownEnumDescriptions": [
+            "Treat a `.ini` file as a LinuxCNC machine INI only when its content has machine sections (e.g. `[EMC]`, `[HAL]`, `[KINS]`, `[TRAJ]`) — does not hijack unrelated `.ini` files.",
+            "Treat every `.ini` file as a LinuxCNC machine INI.",
+            "Never auto-assign the LinuxCNC INI language; assign it manually via the language picker."
+          ],
+          "markdownDescription": "How `.ini` files are recognized as LinuxCNC machine configs. `.hal` and `.ngc` are always recognized by extension."
         },
         "linuxcnc.diagnostics.enable": {
           "type": "boolean",

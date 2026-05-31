@@ -1,0 +1,8 @@
+# Exclude sources/build config from the VSIX; ship only the bundle + grammars.
+src/**
+esbuild.js
+tsconfig.json
+out-tsc/**
+**/*.ts
+**/*.map
+.vscode-test/**
