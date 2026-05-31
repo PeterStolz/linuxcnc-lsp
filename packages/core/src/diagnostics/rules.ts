@@ -40,6 +40,19 @@ export const RULES: readonly RuleDef[] = [
   { id: 'ini.key.unreferenced', defaultSeverity: H, description: 'An INI key is not referenced by any HAL file or known core consumer.' },
   { id: 'ini.value.typeMismatch', defaultSeverity: W, description: 'An INI value does not match the documented type (e.g. a non-number for a real/int key).' },
   { id: 'ini.value.enumMismatch', defaultSeverity: W, description: 'An INI value is not one of the documented allowed values for an enum key.' },
+
+  // --- G-code O-word structure (intra-file) ---
+  { id: 'gcode.oword.unmatchedClose', defaultSeverity: E, description: 'An O-word terminator has no matching opener (e.g. endif without if, or endsub without sub).' },
+  { id: 'gcode.oword.unclosed', defaultSeverity: E, description: 'An O-word block is never closed (missing endsub/endif/endwhile/endrepeat, or a do without a closing while).' },
+  { id: 'gcode.oword.labelMismatch', defaultSeverity: E, description: "An O-word terminator's label does not match its opener (e.g. o100 sub … o200 endsub)." },
+  { id: 'gcode.oword.nestedSub', defaultSeverity: E, description: 'A subroutine is defined inside another subroutine (not allowed).' },
+  { id: 'gcode.oword.duplicateSub', defaultSeverity: W, description: 'A subroutine name is defined more than once.' },
+  { id: 'gcode.oword.duplicateElse', defaultSeverity: W, description: 'More than one else branch in a single if-block.' },
+  { id: 'gcode.oword.returnOutsideSub', defaultSeverity: W, description: 'A return appears outside any subroutine.' },
+  { id: 'gcode.oword.controlOutsideLoop', defaultSeverity: W, description: 'A break/continue appears outside any while/do/repeat loop.' },
+  { id: 'gcode.oword.missingKeyword', defaultSeverity: W, description: 'An O-word is not followed by a keyword (sub, call, if, while, ...).' },
+  // --- G-code subroutine resolution (cross-file) ---
+  { id: 'gcode.call.unknownSub', defaultSeverity: H, description: 'A call references a subroutine not defined in this file or found in the subroutine search path.' },
 ] as const;
 
 export type RuleId = (typeof RULES)[number]['id'];

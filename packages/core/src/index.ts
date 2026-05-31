@@ -18,6 +18,12 @@ export * from './ini/ast';
 
 // G-code
 export { tokenizeGcode, gcodeTokenAt, GcodeToken, GcodeTokenKind, O_KEYWORDS } from './gcode/tokenizer';
+export { parseGcode, classifyOword } from './gcode/parser';
+export * from './gcode/ast';
+export { formatGcode, GcodeFormatOptions } from './gcode/format';
+export {
+  gcodeOwordAt, gcodeDefinition, gcodeReferences, gcodeDocumentHighlights,
+} from './gcode/navigation';
 
 // Diagnostics
 export { RULES, RuleId, resolveSeverity, SeverityName } from './diagnostics/rules';
@@ -26,11 +32,12 @@ export {
 } from './diagnostics/types';
 export { diagnoseHalIntraFile } from './diagnostics/hal';
 export { diagnoseIniIntraFile } from './diagnostics/ini';
+export { diagnoseGcodeIntraFile, diagnoseGcodeUnresolvedCalls } from './diagnostics/gcode';
 
 // Providers
 export {
   SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SemanticTokenItem,
   buildHalSemanticTokens, buildIniSemanticTokens,
 } from './providers/semanticTokens';
-export { halDocumentSymbols, iniDocumentSymbols } from './providers/documentSymbol';
-export { halFoldingRanges, iniFoldingRanges } from './providers/folding';
+export { halDocumentSymbols, iniDocumentSymbols, gcodeDocumentSymbols } from './providers/documentSymbol';
+export { halFoldingRanges, iniFoldingRanges, gcodeFoldingRanges } from './providers/folding';

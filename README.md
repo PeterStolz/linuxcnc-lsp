@@ -19,6 +19,10 @@ Language Server Protocol implementation and VSCode extension for editing
 - Context-aware autocomplete, including Mesa hostmot2 card pins and `config=`
   string attributes
 - Custom workspace `.comp` components are parsed and contribute hover/completion
+- G-code O-word subroutines: go-to-definition / find-references (including
+  cross-file `.ngc` resolution via the INI subroutine search path), document
+  outline, folding, a block-indenting formatter, and structural diagnostics for
+  unmatched / unclosed / mismatched O-words
 
 ## Architecture
 

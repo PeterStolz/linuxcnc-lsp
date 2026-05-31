@@ -3,6 +3,7 @@ import { LineIndex } from '../common/lineIndex';
 import { HalFile, LoadrtStatement, NetStatement, NewsigStatement } from '../hal/ast';
 import { HalToken } from '../hal/tokens';
 import { IniFile } from '../ini/ast';
+import { GcodeProgram } from '../gcode/ast';
 
 function sym(
   name: string,
@@ -89,6 +90,21 @@ export function halDocumentSymbols(file: HalFile, lineIndex: LineIndex): Documen
     out.push(sym(name, `${t.funcs.length} function(s)`, SymbolKind.Namespace, r, r, t.funcs));
   }
 
+  return out;
+}
+
+/** Outline the subroutine definitions of a G-code document. */
+export function gcodeDocumentSymbols(program: GcodeProgram, lineIndex: LineIndex): DocumentSymbol[] {
+  const out: DocumentSymbol[] = [];
+  for (const def of program.subs) {
+    const blk = def.block;
+    const endOff = blk.close
+      ? blk.close.keywordEnd
+      : lineIndex.offsetAt({ line: blk.endLine, character: Number.MAX_SAFE_INTEGER });
+    const fullRange = lineIndex.rangeAt(def.open.oword.start, Math.max(endOff, def.open.keywordEnd));
+    const selectionRange = lineIndex.rangeAt(def.open.oword.start, def.open.oword.end);
+    out.push(sym(def.open.oword.raw, 'subroutine', SymbolKind.Function, fullRange, selectionRange));
+  }
   return out;
 }
 

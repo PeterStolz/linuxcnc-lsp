@@ -24,6 +24,13 @@ Language support for **LinuxCNC** configuration files: `.hal` (HAL), `.ini`
 - G-code (`.ngc`): hover docs for G/M/F/S/T words (from the LinuxCNC docs),
   explanations for axis words, numbered/named parameters and O-word control flow,
   plus completion of G/M codes and O-word keywords
+- G-code O-word subroutines: go-to-definition / find-references (including
+  cross-file `.ngc` files resolved via the INI subroutine search path —
+  `[RS274NGC]SUBROUTINES`, `[DISPLAY]PROGRAM_PREFIX`), a document outline and
+  folding for subroutine / control-flow blocks, a formatter that indents
+  `sub`/`if`/`while`/`do`/`repeat` blocks by nesting depth, and structural
+  diagnostics (unmatched / unclosed / mismatched O-words, duplicate or nested
+  subroutines, misplaced `return`/`break`/`continue`)
 
 Open a folder containing your machine config (`.ini` + `.hal` files) for the
 cross-file features to work.

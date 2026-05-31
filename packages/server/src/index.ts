@@ -5,7 +5,12 @@ import {
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { URI } from 'vscode-uri';
-import { SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName } from '@linuxcnc/core';
+import {
+  SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName,
+  LineIndex, parseGcode,
+  gcodeOwordAt, gcodeDefinition, gcodeReferences, gcodeDocumentHighlights,
+  diagnoseGcodeUnresolvedCalls,
+} from '@linuxcnc/core';
 import {
   MetadataIndex, hoverHal, hoverIni, buildMachineModel, crossFileDiagnostics,
   definition, references, documentHighlights, MachineModel, iniRefsTo,
@@ -14,8 +19,9 @@ import {
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
-  computeDocumentSymbols, computeFoldingRanges, DocModel,
+  computeDocumentSymbols, computeFoldingRanges, computeFormat, DocModel,
 } from './analysis';
+import { Location, DocumentHighlight } from 'vscode-languageserver/node';
 import { loadMetadata, scanWorkspaceComps } from './metadata';
 import { Project, resolveActiveMachine, pickMachine } from './project';
 
@@ -77,6 +83,7 @@ connection.onInitialize((params): InitializeResult => {
       },
       renameProvider: { prepareProvider: true },
       codeActionProvider: true,
+      documentFormattingProvider: true,
       semanticTokensProvider: {
         legend: { tokenTypes: [...SEMANTIC_TOKEN_TYPES], tokenModifiers: [...SEMANTIC_TOKEN_MODIFIERS] },
         full: true,
@@ -201,6 +208,73 @@ function publishUri(uri: string, crossByUri?: Map<string, Diagnostic[]>): void {
   publish(uri, [...intra, ...cross]);
 }
 
+function isGcodeUri(lower: string): boolean {
+  return lower.endsWith('.ngc') || lower.endsWith('.nc') || lower.endsWith('.gcode') || lower.endsWith('.tap');
+}
+
+/** Cross-file G-code diagnostics: `call`s to subroutines that resolve neither
+ *  in-file nor via the project search path. */
+function gcodeCrossDiagnostics(uri: string, model: DocModel): Diagnostic[] {
+  if (!model.gcode) return [];
+  const program = model.gcode;
+  const definedKeys = new Set(program.subs.map((s) => s.key));
+  const isResolved = (call: import('@linuxcnc/core').OStatement): boolean => {
+    if (call.oword.key !== undefined && definedKeys.has(call.oword.key)) return true;
+    if (call.oword.form === 'named' && call.oword.name) {
+      return project.resolveSubroutineFile(uri, call.oword.name) !== undefined;
+    }
+    return false; // numbered call not defined in-file (numbered subs are file-local)
+  };
+  return diagnoseGcodeUnresolvedCalls(model.text, program, model.lineIndex, isResolved, {
+    overrides: settings.overrides,
+  });
+}
+
+/** In-file then cross-file go-to-definition for a G-code subroutine label. */
+function gcodeDefinitionAt(uri: string, model: DocModel, offset: number): Location[] | null {
+  if (!model.gcode) return null;
+  const inFile = gcodeDefinition(model.gcode, model.lineIndex, uri, offset);
+  if (inFile.length) return inFile;
+  const hit = gcodeOwordAt(model.gcode, offset);
+  if (hit?.form === 'named' && hit.name) {
+    const subUri = project.resolveSubroutineFile(uri, hit.name);
+    if (subUri) {
+      const text = project.readFileText(subUri);
+      if (text !== undefined) {
+        const prog = parseGcode(text);
+        const li = new LineIndex(text);
+        const def = prog.subs.find((s) => s.key === hit.key);
+        const range = def ? li.rangeAt(def.open.oword.start, def.open.oword.end) : li.rangeAt(0, 0);
+        return [{ uri: subUri, range }];
+      }
+      return [{ uri: subUri, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } } }];
+    }
+  }
+  return null;
+}
+
+/** In-file + workspace find-references for a G-code subroutine label. */
+function gcodeReferencesAt(uri: string, model: DocModel, offset: number, includeDecl: boolean): Location[] {
+  if (!model.gcode) return [];
+  const hit = gcodeOwordAt(model.gcode, offset);
+  if (!hit?.key) return [];
+  const out = gcodeReferences(model.gcode, model.lineIndex, uri, offset, includeDecl);
+  for (const otherUri of project.workspaceNgcUris()) {
+    if (otherUri === uri) continue;
+    const text = project.readFileText(otherUri);
+    if (text === undefined) continue;
+    const prog = parseGcode(text);
+    const li = new LineIndex(text);
+    for (const st of prog.statements) {
+      if (st.oword.key !== hit.key) continue;
+      if (st.keyword !== 'call' && st.keyword !== 'sub' && st.keyword !== 'endsub') continue;
+      if (!includeDecl && st.keyword === 'sub') continue;
+      out.push({ uri: otherUri, range: li.rangeAt(st.oword.start, st.oword.end) });
+    }
+  }
+  return out;
+}
+
 /** Top-level: a document changed; revalidate it and any machine siblings. */
 function onDocChanged(uri: string): void {
   const lower = uri.toLowerCase();
@@ -226,7 +300,16 @@ function onDocChanged(uri: string): void {
     }
     return;
   }
-  publishUri(uri); // gcode etc. -> intra only (none yet)
+  if (isGcodeUri(lower)) {
+    project.indexNgc(uri); // keep the cross-file basename index current
+    if (settings.diagnosticsEnabled === false) { publish(uri, []); return; }
+    const open = documents.get(uri);
+    const model = open ? getModel(open) : tryBuildFromFs(uri);
+    if (!model?.gcode) { publishUri(uri); return; }
+    publish(uri, [...intraDiagnostics(uri), ...gcodeCrossDiagnostics(uri, model)]);
+    return;
+  }
+  publishUri(uri); // other kinds -> intra only
 }
 
 documents.onDidChangeContent((e) => onDocChanged(e.document.uri));
@@ -258,6 +341,8 @@ connection.onDefinition((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
+  const dm = getModel(doc);
+  if (dm.kind === 'gcode') return gcodeDefinitionAt(doc.uri, dm, offset);
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return definition(model, doc.uri, offset);
@@ -267,18 +352,33 @@ connection.onReferences((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
+  const dm = getModel(doc);
+  if (dm.kind === 'gcode') return gcodeReferencesAt(doc.uri, dm, offset, params.context?.includeDeclaration ?? true);
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return references(model, doc.uri, offset, params.context?.includeDeclaration ?? true);
 });
 
-connection.onDocumentHighlight((params) => {
+connection.onDocumentHighlight((params): DocumentHighlight[] | null => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
+  const dm = getModel(doc);
+  if (dm.kind === 'gcode' && dm.gcode) return gcodeDocumentHighlights(dm.gcode, dm.lineIndex, offset);
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return documentHighlights(model, doc.uri, offset);
+});
+
+connection.onDocumentFormatting((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) return null;
+  const model = getModel(doc);
+  if (model.kind !== 'gcode') return null;
+  return computeFormat(model, {
+    tabSize: params.options.tabSize,
+    insertSpaces: params.options.insertSpaces,
+  });
 });
 
 connection.onDocumentSymbol((params) => {
