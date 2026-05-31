@@ -1,0 +1,36 @@
+component and2 "Two-input AND gate";
+pin in bit in0 "First input";
+pin in bit in1 "Second input";
+pin out bit out "Output";
+
+description """
+The *out* pin is computed from the value of the *in0* and *in1* pins according
+to the following truth table:
+
+[options="header",cols="^1,^1,^1"]
+|===
+^h|in1
+^h|in0
+^h|out
+
+|0|0|0
+|0|1|0
+|1|0|0
+|1|1|1
+|===
+
+"""
+;
+option period no;
+function _;
+see_also """
+*logic*(9),
+*lut5*(9),
+*not*(9),
+*or2*(9),
+*xor2*(9).
+""";
+license "GPL";
+author "Jeff Epler";
+;;
+FUNCTION(_) { out = in0 && in1; }
