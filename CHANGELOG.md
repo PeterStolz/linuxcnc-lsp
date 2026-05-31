@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.2...v0.1.3) (2026-05-31)
+
+
+### Bug Fixes
+
+* 8 round-3 fuzz bugs (edges-of-edges; loop converging) ([#4](https://github.com/PeterStolz/linuxcnc-lsp/issues/4)) ([25fa5a9](https://github.com/PeterStolz/linuxcnc-lsp/commit/25fa5a96785b6a46352182c44d4b1801f5c9a1dd))
+
 ## [0.1.2](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.1...v0.1.2) (2026-05-31)
 
 
