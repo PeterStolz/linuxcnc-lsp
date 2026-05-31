@@ -3,7 +3,7 @@ import * as path from 'path';
 import { parseHal, parseIni, LineIndex } from '@linuxcnc/core';
 import {
   loadDBFromFile, MetadataIndex, buildMachineModel, crossFileDiagnostics,
-  hoverGcode, completeGcode, completeHal, completeIni, locateHal, references, hoverHal,
+  hoverGcode, completeGcode, completeHal, completeIni, locateHal, references, hoverHal, rename,
   adocToMarkdown, HalFileInput, MachineModel,
 } from '../src/index';
 
@@ -190,6 +190,66 @@ describe('G-code spaced-dash ranges (audit #5/#6)', () => {
   it('includes all probe variants G38.3/G38.4', () => {
     expect(ghover('G38.3', 'G38.3')).toContain('Probing');
     expect(ghover('G38.4', 'G38.4')).toContain('Probing');
+  });
+});
+
+describe('round-2 adjacent-edge fixes', () => {
+  const applyIniEdit = (text: string, offset: number, label: string): string => {
+    const items = completeIni({ ini: parseIni(text), lineIndex: new LineIndex(text), text, offset, index });
+    const it = items.find((i) => i.label === label)!;
+    const te = it.textEdit as { range: { start: unknown; end: unknown }; newText: string };
+    const li = new LineIndex(text);
+    return text.slice(0, li.offsetAt(te.range.start as never)) + te.newText + text.slice(li.offsetAt(te.range.end as never));
+  };
+
+  it('#1 completeIni does not double the closing bracket', () => {
+    expect(applyIniEdit('[AX]', 3, 'AXIS_X')).toBe('[AXIS_X]');
+    expect(applyIniEdit('[]', 1, 'AXIS_X')).toBe('[AXIS_X]');
+    expect(applyIniEdit('[AX', 3, 'AXIS_X')).toBe('[AXIS_X]'); // unclosed still gets one ]
+  });
+
+  it('#2 completeGcode does not fire inside a [ ] expression (single-letter / number cursor)', () => {
+    const c = (t: string) => completeGcode(t, new LineIndex(t), t.length, index).length;
+    expect(c('G1 X[g')).toBe(0);
+    expect(c('[m')).toBe(0);
+    expect(c('#1=[g0')).toBe(0);
+    expect(c('G1 X[#1+2] G')).toBeGreaterThan(0); // after the bracket closes, codes resume
+  });
+
+  it('#3 rename rejects structurally-invalid new names', () => {
+    const hal = 'net x-pos pid.0.output\n';
+    const m = model(undefined, [{ uri: 'a.hal', text: hal }]);
+    const at = hal.indexOf('x-pos') + 2;
+    for (const bad of ['bad name', 'a=b', 'a#b', 'a[b', 'a\nb']) expect(rename(m, 'a.hal', at, bad)).toBeNull();
+    expect(rename(m, 'a.hal', at, 'x-cmd')).not.toBeNull();
+  });
+
+  it('#4 find-references resolves an embedded-INI Mesa pin (no fragment conflation)', () => {
+    const m = model(undefined, [{ uri: 'a.hal', text: 'net s hm2_[HM](BOARD).0.gpio.001.in\nnet s2 hm2_[HM](BOARD).0.gpio.001.in\n' }]);
+    const text = 'net s hm2_[HM](BOARD).0.gpio.001.in\nnet s2 hm2_[HM](BOARD).0.gpio.001.in\n';
+    const refs = references(m, 'a.hal', text.indexOf('.0.gpio') + 3);
+    expect(refs.length).toBeGreaterThanOrEqual(2); // both occurrences found, not zero
+  });
+
+  it('#5 bool ON/OFF is accepted (no false type mismatch)', () => {
+    const d = codes(model('[AXIS_X]\nHOME_USE_INDEX = ON\n', []), 'file:///m.ini');
+    expect(d).not.toContain('ini.value.typeMismatch');
+  });
+
+  it('#6 hoverHal resolves a pin on a names=-defined instance via the model', () => {
+    const hal = 'loadrt scale names=spindle-fb-rpm-scale\nsetp spindle-fb-rpm-scale.gain 2\n';
+    const m = model(undefined, [{ uri: 'a.hal', text: hal }]);
+    const h = hoverHal(parseHal(hal), new LineIndex(hal), hal.indexOf('.gain') + 2, index, m);
+    expect(h && typeof h.contents === 'object' && 'value' in h.contents ? (h.contents as { value: string }).value : '').toContain('scale');
+  });
+
+  it('#7 no bogus bare G38 entry; G38.2 still documented', () => {
+    expect(ghover('G38', 'G38')).not.toContain('Straight Probe'); // junk title gone
+    expect(ghover('G38.2', 'G38.2')).toContain('Probing');
+  });
+
+  it('#13 hoverGcode preserves brackets for ## indirect named params', () => {
+    expect(ghover('X##<myvar>', '##<myvar>')).toContain('#<myvar>');
   });
 });
 

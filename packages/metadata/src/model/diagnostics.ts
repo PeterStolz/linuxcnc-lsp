@@ -204,9 +204,9 @@ function validateIniValue(type: string, value: string, doc?: string): ValueProbl
     case 'bit':
       return /^[01]$/.test(v) ? undefined : { rule: 'ini.value.typeMismatch', message: `Expected 0 or 1 for this key, but got \`${v}\`.` };
     case 'bool':
-      return /^(0|1|true|false|yes|no)$/i.test(v)
+      return /^(0|1|true|false|yes|no|on|off)$/i.test(v)
         ? undefined
-        : { rule: 'ini.value.typeMismatch', message: `Expected a boolean (1/0, TRUE/FALSE or YES/NO), but got \`${v}\`.` };
+        : { rule: 'ini.value.typeMismatch', message: `Expected a boolean (1/0, TRUE/FALSE, YES/NO or ON/OFF), but got \`${v}\`.` };
     case 'enum': {
       const allowed = enumValues(doc);
       if (!allowed.length) return undefined;

@@ -59,9 +59,17 @@ export function prepareRename(model: MachineModel, uri: string, offset: number):
 }
 
 /** Build a workspace edit renaming the symbol at `offset` to `newName`. */
+/** An INI key must match the parser's key grammar; a HAL signal must be a single
+ *  bare token (no whitespace or HAL-significant punctuation) — otherwise the edit
+ *  would corrupt the file. */
+function isValidRenameTarget(kind: 'signal' | 'iniKey', newName: string): boolean {
+  if (kind === 'iniKey') return /^[A-Za-z_][A-Za-z0-9_]*$/.test(newName);
+  return newName.length > 0 && !/[\s\[\]()=<>#;"'\\]/.test(newName);
+}
+
 export function rename(model: MachineModel, uri: string, offset: number, newName: string): WorkspaceEdit | null {
   const r = locateRenamable(model, uri, offset);
-  if (!r || !newName) return null;
+  if (!r || !newName || !isValidRenameTarget(r.kind, newName)) return null;
 
   const changes: Record<string, TextEdit[]> = {};
   const add = (u: string, range: Range): void => {

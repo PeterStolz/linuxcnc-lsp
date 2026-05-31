@@ -272,6 +272,18 @@ function scanPinOccurrences(files: HalFileInput[], pinName: string): Location[] 
   const out: Location[] = [];
   for (const f of files) {
     for (const stmt of f.hal.statements) {
+      if (stmt.kind === 'net') {
+        // Merge contiguous link tokens so an embedded-INI pin
+        // (hm2_[HOSTMOT2](BOARD).0.gpio.in) matches by its full name.
+        for (const atom of mergeLinkAtoms((stmt as NetStatement).links)) {
+          if (atom.text === pinName) {
+            const a = atom.tokens[0];
+            const b = atom.tokens[atom.tokens.length - 1];
+            out.push({ uri: f.uri, range: f.lineIndex.rangeAt(a.start, b.end) });
+          }
+        }
+        continue;
+      }
       for (const t of pinTokens(stmt)) {
         if (t.text === pinName) out.push({ uri: f.uri, range: f.lineIndex.rangeAt(t.start, t.end) });
       }

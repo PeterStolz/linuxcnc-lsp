@@ -244,7 +244,7 @@ connection.onHover((params) => {
   if (!doc) return null;
   const model = getModel(doc);
   const offset = doc.offsetAt(params.position);
-  if (model.kind === 'hal' && model.hal) return hoverHal(model.hal, model.lineIndex, offset, metadata);
+  if (model.kind === 'hal' && model.hal) return hoverHal(model.hal, model.lineIndex, offset, metadata, modelForHal(doc.uri));
   if (model.kind === 'ini' && model.ini) {
     const mm = project.buildModel(doc.uri, metadata);
     const refCount = mm ? (s: string, k: string) => iniRefsTo(mm, s, k).length : undefined;

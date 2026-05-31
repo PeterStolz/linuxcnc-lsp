@@ -74,6 +74,35 @@ describe('G-code exponent codes (fuzz #19)', () => {
   });
 });
 
+describe('G-code code normalization + names= clamp (round2 #9/#12)', () => {
+  it('normalizeNum never emits exponent notation for huge G/M code numbers', () => {
+    const t = tokenizeGcode('G999999999999999999999999');
+    // value kept verbatim; no exponent, no digit alteration
+    expect(t[0].code === undefined || !/e/i.test(t[0].code!)).toBe(true);
+    expect(tokenizeGcode('G01')[0].code).toBe('G1');
+    expect(tokenizeGcode('G38.20')[0].code).toBe('G38.2');
+  });
+  it('names= is clamped to MAX_INSTANCE_COUNT', () => {
+    const names = Array.from({ length: 5000 }, (_, i) => `n${i}`).join(',');
+    const s = parseHal(`loadrt pid names=${names}`).statements[0] as { names?: string[] };
+    expect(s.names!.length).toBe(MAX_INSTANCE_COUNT);
+  });
+});
+
+describe('bare-CR comment/param scanners (round2 #8)', () => {
+  it('a HAL # comment with CR endings does not swallow the next line', () => {
+    const text = 'loadrt and2\r# a comment\rnet s and2.0.out\r';
+    const d = diagnoseHalIntraFile(text, parseHal(text), new LineIndex(text));
+    // the `net` line must be parsed, not eaten by the comment
+    expect(d.some((x) => x.code === 'hal.syntax.unknownCommand')).toBe(false);
+    expect(parseHal(text).statements.some((s) => s.kind === 'net')).toBe(true);
+  });
+  it('a G-code ( comment with CR endings stops at the CR', () => {
+    const t = tokenizeGcode('G0 (rapid)\rG1 X1\r');
+    expect(t.some((x) => x.code === 'G1')).toBe(true); // G1 not swallowed by the comment
+  });
+});
+
 describe('instance-count keywords (audit #1/#4/#9)', () => {
   const count = (t: string) => (parseHal(t).statements[0] as { count?: number }).count;
   it('num_chan= sets the instance count (pid/encoder)', () => expect(count('loadrt pid num_chan=3')).toBe(3));

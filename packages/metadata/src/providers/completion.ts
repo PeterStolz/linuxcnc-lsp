@@ -551,7 +551,13 @@ export function completeIni(ctx: IniCompletionContext): CompletionItem[] {
   // Section header: line starts with `[`.
   if (trimmed.startsWith('[')) {
     const inner = trimmed.slice(1).replace(/\].*$/, '');
-    const range = lineIndex.rangeAt(start + leading + 1, offset);
+    // Consume a `]` already present after the cursor (e.g. `[AX|]` or auto-closed
+    // `[|]`) so accepting a completion yields `[AXIS_X]`, not `[AXIS_X]]`.
+    let endOff = offset;
+    for (let k = offset; k < text.length && text[k] !== '\n' && text[k] !== '\r'; k++) {
+      if (text[k] === ']') { endOff = k + 1; break; }
+    }
+    const range = lineIndex.rangeAt(start + leading + 1, endOff);
     const names = new Set<string>();
     for (const s of ini.sections) { const nm = s.name.text.trim(); if (nm) names.add(nm); }
     for (const name of Object.keys(index.raw().iniSections)) names.add(friendlySection(name));

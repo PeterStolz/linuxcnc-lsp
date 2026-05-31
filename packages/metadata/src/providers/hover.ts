@@ -6,6 +6,8 @@ import {
 } from '@linuxcnc/core';
 import { MetadataIndex } from '../db';
 import { ComponentDef, PinDef, ParamDef, FuncDef } from '../types';
+import { MachineModel } from '../model/types';
+import { resolveInstance } from '../model/build';
 
 function md(value: string, range?: Range): Hover {
   return { contents: { kind: MarkupKind.Markdown, value }, range };
@@ -24,6 +26,7 @@ export function hoverHal(
   lineIndex: LineIndex,
   offset: number,
   index: MetadataIndex,
+  model?: MachineModel,
 ): Hover | null {
   for (const stmt of hal.statements) {
     if (offset < stmt.start || offset > stmt.end) continue;
@@ -32,7 +35,7 @@ export function hoverHal(
       return commandHover(stmt.command, index, range(lineIndex, stmt.commandToken));
     }
 
-    const h = hoverInStatement(stmt, lineIndex, offset, index);
+    const h = hoverInStatement(stmt, lineIndex, offset, index, model);
     if (h) return h;
   }
   return null;
@@ -43,6 +46,7 @@ function hoverInStatement(
   lineIndex: LineIndex,
   offset: number,
   index: MetadataIndex,
+  model?: MachineModel,
 ): Hover | null {
   switch (stmt.kind) {
     case 'loadrt': {
@@ -66,14 +70,14 @@ function hoverInStatement(
       for (const l of s.links) {
         if (inTok(l.pinToken, offset)) {
           if (l.pinToken.ini) return iniRefHover(l.pinToken, index, lineIndex);
-          return pinHover(l.pinToken.text, index, range(lineIndex, l.pinToken));
+          return pinHover(l.pinToken.text, index, range(lineIndex, l.pinToken), model);
         }
       }
       return null;
     }
     case 'setp': {
       const s = stmt as SetpStatement;
-      if (inTok(s.pinToken, offset)) return pinHover(s.pinToken.text, index, range(lineIndex, s.pinToken));
+      if (inTok(s.pinToken, offset)) return pinHover(s.pinToken.text, index, range(lineIndex, s.pinToken), model);
       if (inTok(s.valueToken, offset) && s.valueToken!.ini) return iniRefHover(s.valueToken!, index, lineIndex);
       return null;
     }
@@ -87,7 +91,7 @@ function hoverInStatement(
     case 'initf':
     case 'delf': {
       const s = stmt as unknown as Record<string, HalToken | undefined>;
-      if (inTok(s.functionToken, offset)) return functionHover(s.functionToken!.text, index, range(lineIndex, s.functionToken!));
+      if (inTok(s.functionToken, offset)) return functionHover(s.functionToken!.text, index, range(lineIndex, s.functionToken!), model);
       if (inTok(s.threadToken, offset)) return md(`**thread** \`${s.threadToken!.text}\``, range(lineIndex, s.threadToken!));
       return null;
     }
@@ -101,7 +105,7 @@ function hoverInStatement(
           // pin for linkps.first/linkpp.*; otherwise a signal
           if (stmt.kind === 'linkps' && key === 'secondToken') return signalHover(t!.text, range(lineIndex, t!));
           if (stmt.kind === 'linksp' && key === 'firstToken') return signalHover(t!.text, range(lineIndex, t!));
-          return pinHover(t!.text, index, range(lineIndex, t!));
+          return pinHover(t!.text, index, range(lineIndex, t!), model);
         }
       }
       return null;
@@ -198,10 +202,24 @@ function signalHover(name: string, r: Range): Hover {
 function resolvePin(
   fullName: string,
   index: MetadataIndex,
+  model?: MachineModel,
 ): { comp: ComponentDef; member: PinDef | ParamDef; kind: 'pin' | 'param' } | null {
   // Absolute builtins: joint.N.* / axis.L.* / motion.* / spindle.N.*
   const builtin = index.builtinPin(fullName);
   if (builtin) return { comp: builtin.comp, member: builtin.pin, kind: 'pin' };
+
+  // Exact resolution via the machine model — handles names=-defined instances
+  // (e.g. `spindle-fb-rpm-scale.in`) whose prefix is not a component name.
+  if (model) {
+    const inst = resolveInstance(fullName, model.instances);
+    const comp = inst && inst.suffix ? index.component(inst.comp) : undefined;
+    if (comp) {
+      const pin = comp.pins.find((p) => sameMember(p.name, inst!.suffix));
+      if (pin) return { comp, member: pin, kind: 'pin' };
+      const param = comp.params.find((p) => sameMember(p.name, inst!.suffix));
+      if (param) return { comp, member: param, kind: 'param' };
+    }
+  }
 
   const parts = fullName.split('.');
   const comp = index.componentByPrefix(parts[0]);
@@ -221,8 +239,8 @@ function sameMember(a: string, b: string): boolean {
   return a.replace(/\d+/g, '#') === b.replace(/\d+/g, '#');
 }
 
-function pinHover(fullName: string, index: MetadataIndex, r: Range): Hover | null {
-  const res = resolvePin(fullName, index);
+function pinHover(fullName: string, index: MetadataIndex, r: Range, model?: MachineModel): Hover | null {
+  const res = resolvePin(fullName, index, model);
   if (!res) return null;
   const { comp, member, kind } = res;
   const dir = 'dir' in member ? member.dir : '';
@@ -232,9 +250,11 @@ function pinHover(fullName: string, index: MetadataIndex, r: Range): Hover | nul
   return md(lines.join('\n'), r);
 }
 
-function functionHover(fullName: string, index: MetadataIndex, r: Range): Hover | null {
+function functionHover(fullName: string, index: MetadataIndex, r: Range, model?: MachineModel): Hover | null {
   const parts = fullName.split('.');
-  const comp = index.componentByPrefix(parts[0]);
+  // Prefer the model (resolves names=-defined instances), else the prefix heuristic.
+  const inst = model ? resolveInstance(fullName, model.instances) : undefined;
+  const comp = (inst && index.component(inst.comp)) || index.componentByPrefix(parts[0]);
   if (!comp) return null;
   // global function (e.g. stepgen.make-pulses) or instance.suffix / bare instance
   let fn = comp.functions.find((f) => f.global && f.name === fullName);

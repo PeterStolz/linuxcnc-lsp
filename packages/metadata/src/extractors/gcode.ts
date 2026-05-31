@@ -44,9 +44,14 @@ export function extractGcode(gcodeAdoc: string, mcodeAdoc: string, otherAdoc: st
     }
     // Sections whose codes never appeared in the quick-ref table.
     for (const sec of sections.values()) {
-      const codes = (sec.heading.match(/[A-Za-z]\d+(?:\.\d+)?(?:-[A-Za-z]?\d+(?:\.\d+)?)?/g) ?? []).flatMap(expandCodes);
+      // The `(?!\.\D)` guard rejects a bare stem followed by a `.<non-digit>`
+      // placeholder, e.g. `G38` in the heading `G38._n_ Straight Probe`.
+      const codes = (sec.heading.match(/[A-Za-z]\d+(?:\.\d+)?(?:-[A-Za-z]?\d+(?:\.\d+)?)?(?!\.\D)/g) ?? []).flatMap(expandCodes);
       for (const code of codes) {
-        if (!out[code]) put(code, { title: stripLeadingCodes(sec.heading), docMd: buildDoc(sec.body) });
+        if (out[code]) continue;
+        // Don't synthesize a bare stem (G38) when dotted variants (G38.2 …) exist.
+        if (Object.keys(out).some((k) => k.startsWith(code + '.'))) continue;
+        put(code, { title: stripLeadingCodes(sec.heading), docMd: buildDoc(sec.body) });
       }
     }
   }

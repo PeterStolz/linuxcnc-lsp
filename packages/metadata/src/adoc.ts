@@ -74,8 +74,11 @@ function inline(s: string): string {
   r = r.replace(/<<[^,>]+,([^>]+)>>/g, '$1').replace(/<<([^>]+)>>/g, '$1');
   // asciidoc monospace +code+ -> `code`
   r = r.replace(/(^|\s)\+([^+\s][^+]*?)\+(?=\s|$|[.,;:])/g, '$1`$2`');
-  // single-star asciidoc bold -> markdown **bold**, leaving existing ** alone
-  r = r.replace(/(?<![*\w])\*(?!\*)([^*\n]+?)\*(?!\*)/g, '**$1**');
+  // single-star asciidoc bold -> markdown **bold**, leaving existing ** alone.
+  // Honor asciidoc "constrained" formatting: the markers must be tight against
+  // the text (no inner leading/trailing whitespace), so space-surrounded literal
+  // `*` (multiplication in formulas) is not mistaken for bold.
+  r = r.replace(/(?<![*\w])\*(?!\s)(?!\*)([^*\n]*?[^*\s])\*(?![*\w])/g, '**$1**');
   // asciidoc double-underscore italic -> markdown _italic_
   r = r.replace(/__([^_]+)__/g, '_$1_');
   return r;

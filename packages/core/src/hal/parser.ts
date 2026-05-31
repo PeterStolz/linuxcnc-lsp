@@ -145,7 +145,9 @@ function parseLoadrt(
       const lname = nameToken.text.toLowerCase();
       if (lname === 'names' && valueToken) {
         namesToken = valueToken;
-        names = valueToken.text.split(',').map((s) => s.trim()).filter(Boolean);
+        // Clamp like count=/num_chan= so an absurd names= list can't drive an
+        // unbounded model/completion allocation.
+        names = valueToken.text.split(',').map((s) => s.trim()).filter(Boolean).slice(0, MAX_INSTANCE_COUNT);
       } else if ((lname === 'count' || lname === 'num_chan') && valueToken) {
         // `count=` is the generic halcmd keyword; `num_chan=` is the per-channel
         // count used by pid/encoder/siggen/counter. Both set the instance count.

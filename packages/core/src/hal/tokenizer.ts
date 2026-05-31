@@ -76,7 +76,7 @@ export function tokenizeHal(text: string): HalLogicalLine[] {
         // Rest of the physical line is a comment. (Continuation does not apply
         // after a comment begins.)
         let j = i;
-        while (j < n && text[j] !== '\n') j++;
+        while (j < n && text[j] !== '\n' && text[j] !== '\r') j++;
         comment = { kind: HalTokenKind.Comment, start: i, end: j, text: text.slice(i, j) };
         i = j;
         continue;
@@ -85,7 +85,7 @@ export function tokenizeHal(text: string): HalLogicalLine[] {
       if (ch === '"' || ch === "'") {
         const quote = ch;
         let j = i + 1;
-        while (j < n && text[j] !== quote && text[j] !== '\n') {
+        while (j < n && text[j] !== quote && text[j] !== '\n' && text[j] !== '\r') {
           if (text[j] === '\\' && j + 1 < n) j++;
           j++;
         }

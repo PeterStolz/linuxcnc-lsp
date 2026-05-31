@@ -57,14 +57,14 @@ export function tokenizeGcode(text: string): GcodeToken[] {
     if (c === '(') {
       const start = i;
       i++;
-      while (i < n && text[i] !== ')' && text[i] !== '\n') i++;
+      while (i < n && text[i] !== ')' && text[i] !== '\n' && text[i] !== '\r') i++;
       if (i < n && text[i] === ')') i++;
       out.push({ kind: GcodeTokenKind.Comment, start, end: i, text: text.slice(start, i) });
       continue;
     }
     if (c === ';') {
       const start = i;
-      while (i < n && text[i] !== '\n') i++;
+      while (i < n && text[i] !== '\n' && text[i] !== '\r') i++;
       out.push({ kind: GcodeTokenKind.Comment, start, end: i, text: text.slice(start, i) });
       continue;
     }
@@ -74,7 +74,7 @@ export function tokenizeGcode(text: string): GcodeToken[] {
       const start = i;
       while (i < n && text[i] === '#') i++;
       if (text[i] === '<') {
-        while (i < n && text[i] !== '>' && text[i] !== '\n') i++;
+        while (i < n && text[i] !== '>' && text[i] !== '\n' && text[i] !== '\r') i++;
         if (i < n && text[i] === '>') i++;
       } else {
         while (i < n && isDigit(text[i])) i++;
@@ -105,7 +105,7 @@ export function tokenizeGcode(text: string): GcodeToken[] {
       if (letter === 'O') {
         i++;
         if (text[i] === '<') {
-          while (i < n && text[i] !== '>' && text[i] !== '\n') i++;
+          while (i < n && text[i] !== '>' && text[i] !== '\n' && text[i] !== '\r') i++;
           if (i < n && text[i] === '>') i++;
         } else {
           while (i < n && isDigit(text[i])) i++;
@@ -177,11 +177,17 @@ function scanNumber(text: string, i: number): number {
   return sawDigit ? j : i;
 }
 
-/** Normalize a code's numeric part: G01 -> 1, G38.20 -> 38.2. */
+/** Normalize a code's numeric part by pure string ops (G01 -> 1, G38.20 -> 38.2).
+ *  Never routes through Number, so large/precise values keep their digits and
+ *  can't pick up exponent notation. Input is always plain `\d+(\.\d+)?`. */
 function normalizeNum(v: string): string {
-  if (v.includes('.')) return String(parseFloat(v));
-  const nrm = parseInt(v, 10);
-  return Number.isNaN(nrm) ? v : String(nrm);
+  if (v.includes('.')) {
+    const [rawInt, rawFrac = ''] = v.split('.');
+    const intPart = rawInt.replace(/^0+(?=\d)/, '') || '0';
+    const fracPart = rawFrac.replace(/0+$/, '');
+    return fracPart ? `${intPart}.${fracPart}` : intPart;
+  }
+  return v.replace(/^0+(?=\d)/, '') || '0';
 }
 
 /** The token under `offset`, if any. */

@@ -89,7 +89,10 @@ export function hoverGcode(text: string, lineIndex: LineIndex, offset: number, i
       const hashes = (/^#+/.exec(tok.text)?.[0] ?? '').length;
       const body = tok.text.replace(/^#+/, '').replace(/^<([^>]*)>?$/, '$1');
       if (hashes > 1) {
-        return md(`**indirect parameter reference \`${tok.text}\`** — the value of \`#${body}\` is used as the parameter number to read`, r);
+        // Inner reference = the token minus exactly one '#', preserving the
+        // verbatim form (e.g. `##<name>` -> `#<name>`, not `#name`).
+        const inner = tok.text.slice(1);
+        return md(`**indirect parameter reference \`${tok.text}\`** — the value of \`${inner}\` is used as the parameter number to read`, r);
       }
       if (/^\d+$/.test(body)) return md(`**parameter \`${tok.text}\`** — ${numberedParamDoc(parseInt(body, 10))}`, r);
       if (body.startsWith('_')) return md(`**global named parameter \`${tok.text}\`** — visible across all subroutines`, r);
@@ -109,16 +112,20 @@ export function hoverGcode(text: string, lineIndex: LineIndex, offset: number, i
 // --- Completion -------------------------------------------------------------
 
 export function completeGcode(text: string, lineIndex: LineIndex, offset: number, index: MetadataIndex): CompletionItem[] {
-  // Token-aware guard: never complete G/M codes inside a comment or inside an
-  // expression identifier (a multi-letter run within [ ]).
+  // Never complete G/M codes inside a comment.
   const tok = gcodeTokenAt(tokenizeGcode(text), offset);
-  if (tok && (tok.kind === GcodeTokenKind.Comment ||
-      (tok.kind === GcodeTokenKind.Unknown && tok.text.length > 1 && /[A-Za-z]/.test(tok.text)))) {
-    return [];
-  }
+  if (tok && tok.kind === GcodeTokenKind.Comment) return [];
+
   let ls = offset;
-  while (ls > 0 && text[ls - 1] !== '\n') ls--;
+  while (ls > 0 && text[ls - 1] !== '\n' && text[ls - 1] !== '\r') ls--;
   const prefix = text.slice(ls, offset);
+
+  // Never complete inside an unclosed `[ ]` expression (a `g`/`m` there is an
+  // identifier fragment, not a code). Token-under-cursor can't catch every case
+  // (e.g. the cursor on a Number token in `#1=[g0`), so track bracket depth.
+  let depth = 0;
+  for (const ch of prefix) { if (ch === '[') depth++; else if (ch === ']' && depth) depth--; }
+  if (depth > 0) return [];
 
   // O-word keyword position: after an O<name>/O<num> token.
   const ow = /[oO](?:<[^>]*>|\d+)\s+([A-Za-z]*)$/.exec(prefix);
