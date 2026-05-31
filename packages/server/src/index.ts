@@ -17,7 +17,7 @@ import {
   computeDocumentSymbols, computeFoldingRanges, DocModel,
 } from './analysis';
 import { loadMetadata, scanWorkspaceComps } from './metadata';
-import { Project } from './project';
+import { Project, resolveActiveMachine, pickMachine } from './project';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -29,6 +29,8 @@ interface Settings {
   overrides: Record<string, SeverityName>;
   metadataPath?: string;
   libDir?: string;
+  /** Pin which machine (.ini) provides context for HAL files shared by >1 INI. */
+  activeMachine?: string;
 }
 let settings: Settings = { diagnosticsEnabled: true, overrides: {} };
 
@@ -117,6 +119,7 @@ async function refreshSettings(): Promise<void> {
         overrides: (cfg?.diagnostics?.rules ?? {}) as Record<string, SeverityName>,
         metadataPath: cfg?.metadata?.path || undefined,
         libDir: cfg?.libDir || undefined,
+        activeMachine: cfg?.activeMachine || undefined,
       };
     } catch {
       /* keep defaults */
@@ -146,12 +149,21 @@ function tryBuildFromFs(uri: string): DocModel | undefined {
   }
 }
 
-/** Build the machine model owning `halUri` (first owner), or a standalone
- *  single-file model for an orphan HAL file. */
+/** The machine (.ini) that provides context for `halUri`: the pinned active
+ *  machine when it owns the file, otherwise the first owner. */
+function machineForHal(uri: string): string | undefined {
+  const machines = project.machinesForHal(uri);
+  if (!machines.length) return undefined;
+  const active = resolveActiveMachine(settings.activeMachine, project.allIniUris());
+  return pickMachine(machines, active);
+}
+
+/** Build the machine model providing context for `halUri` (honoring the pinned
+ *  active machine), or a standalone single-file model for an orphan HAL file. */
 function modelForHal(uri: string): MachineModel | undefined {
   if (!metadata) return undefined;
-  const machines = project.machinesForHal(uri);
-  if (machines.length) return project.buildModel(machines[0], metadata);
+  const ini = machineForHal(uri);
+  if (ini) return project.buildModel(ini, metadata);
   const doc = documents.get(uri);
   const model = doc ? getModel(doc) : tryBuildFromFs(uri);
   if (!model?.hal) return undefined;
@@ -183,8 +195,8 @@ function publishUri(uri: string, crossByUri?: Map<string, Diagnostic[]>): void {
   if (crossByUri) {
     cross = crossByUri.get(uri) ?? [];
   } else if (uri.toLowerCase().endsWith('.hal') && metadata) {
-    const machines = project.machinesForHal(uri);
-    if (machines.length) cross = crossForMachine(machines[0]).get(uri) ?? [];
+    const ini = machineForHal(uri);
+    if (ini) cross = crossForMachine(ini).get(uri) ?? [];
   }
   publish(uri, [...intra, ...cross]);
 }
@@ -201,18 +213,14 @@ function onDocChanged(uri: string): void {
     return;
   }
   if (lower.endsWith('.hal')) {
-    const machines = project.machinesForHal(uri);
-    if (machines.length && metadata) {
-      const seen = new Set<string>();
-      for (const ini of machines) {
-        const cross = crossForMachine(ini);
-        for (const h of cross.keys()) {
-          if (seen.has(h)) continue;
-          seen.add(h);
-          publishUri(h, cross);
-        }
-      }
-      if (!seen.has(uri)) publishUri(uri);
+    const ini = machineForHal(uri);
+    if (ini && metadata) {
+      // Publish diagnostics for the (preferred) machine's files using that one
+      // machine's context — for a shared HAL this avoids "error in A, fine in B"
+      // flapping and honors the pinned active machine.
+      const cross = crossForMachine(ini);
+      for (const h of cross.keys()) publishUri(h, cross);
+      if (!cross.has(uri)) publishUri(uri);
     } else {
       publishUri(uri);
     }

@@ -148,6 +148,35 @@ export class Project {
   }
 }
 
+/** Resolve the `linuxcnc.activeMachine` setting (an INI path or file name) to one
+ *  of the workspace's indexed INI URIs. Accepts an exact fs-path or a path/name
+ *  suffix so the user can write `MachineA.ini`, `subdir/MachineA.ini`, or a full
+ *  path. Returns undefined if unset or no match. */
+export function resolveActiveMachine(setting: string | undefined, iniUris: string[]): string | undefined {
+  if (!setting || !setting.trim()) return undefined;
+  const want = setting.trim().replace(/\\/g, '/').toLowerCase();
+  let suffixMatch: string | undefined;
+  for (const uri of iniUris) {
+    let fsPath: string;
+    try {
+      fsPath = URI.parse(uri).fsPath.replace(/\\/g, '/').toLowerCase();
+    } catch {
+      continue;
+    }
+    if (fsPath === want) return uri; // exact path
+    if (!suffixMatch && (fsPath.endsWith('/' + want) || fsPath === want)) suffixMatch = uri;
+  }
+  return suffixMatch;
+}
+
+/** Choose the machine that provides context for a HAL file owned by 0..N
+ *  machines: the pinned active machine if it owns the file, else the first. */
+export function pickMachine(machines: string[], activeUri?: string): string | undefined {
+  if (!machines.length) return undefined;
+  if (activeUri && machines.includes(activeUri)) return activeUri;
+  return machines[0];
+}
+
 function findIniFiles(root: string, maxDepth = 5): string[] {
   const out: string[] = [];
   const walk = (dir: string, depth: number): void => {

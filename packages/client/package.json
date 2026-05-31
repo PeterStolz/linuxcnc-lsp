@@ -22,6 +22,12 @@
     "workspaceContains:**/*.hal"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "linuxcnc.selectActiveMachine",
+        "title": "LinuxCNC: Select Active Machine"
+      }
+    ],
     "languages": [
       {
         "id": "hal",
@@ -71,6 +77,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Override path to a metadata JSON database (regenerated from a specific LinuxCNC version). Empty uses the bundled database."
+        },
+        "linuxcnc.activeMachine": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "When a `.hal` file is shared by more than one machine (`.ini`), pin which machine provides its context — diagnostics, hover, go-to-definition/references, and completion all use the pinned machine. Set to the INI's file name or path, e.g. `MachineA.ini` or `configs/a/MachineA.ini`. Empty = use the first machine found. Tip: run **LinuxCNC: Select Active Machine** to pick from a list."
         },
         "linuxcnc.iniDetection": {
           "type": "string",

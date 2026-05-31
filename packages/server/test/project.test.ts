@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { URI } from 'vscode-uri';
 import { loadDBFromFile, MetadataIndex, crossFileDiagnostics } from '@linuxcnc/metadata';
-import { Project } from '../src/project';
+import { Project, resolveActiveMachine, pickMachine } from '../src/project';
 
 const DB = path.resolve(__dirname, '../../metadata/data/db.json');
 let index: MetadataIndex;
@@ -58,5 +58,48 @@ describe('Project #INCLUDE resolution (fuzz #4/#7)', () => {
     const project = new Project(() => undefined, () => undefined);
     project.indexIni(aUri);
     expect(() => project.buildModel(aUri, index)).not.toThrow();
+  });
+});
+
+describe('active-machine pinning for shared HAL (multi-machine)', () => {
+  it('resolveActiveMachine matches by file name, path suffix, or exact path', () => {
+    const uris = ['file:///cfg/a/MachineA.ini', 'file:///cfg/b/MachineB.ini'];
+    expect(resolveActiveMachine('MachineA.ini', uris)).toBe('file:///cfg/a/MachineA.ini');
+    expect(resolveActiveMachine('b/MachineB.ini', uris)).toBe('file:///cfg/b/MachineB.ini');
+    expect(resolveActiveMachine('/cfg/a/MachineA.ini', uris)).toBe('file:///cfg/a/MachineA.ini');
+    expect(resolveActiveMachine('', uris)).toBeUndefined();
+    expect(resolveActiveMachine('nope.ini', uris)).toBeUndefined();
+  });
+
+  it('pickMachine prefers the active machine only when it owns the file', () => {
+    expect(pickMachine([], 'x')).toBeUndefined();
+    expect(pickMachine(['a', 'b'], 'b')).toBe('b');
+    expect(pickMachine(['a', 'b'], 'c')).toBe('a'); // active not an owner -> first
+    expect(pickMachine(['a', 'b'], undefined)).toBe('a');
+  });
+
+  it('one HAL shared by two machines: pinning selects whose context resolves the INI ref', () => {
+    // shared.hal references [JOINT_0]GAIN, defined only in MachineA.
+    write('shared.hal', 'loadrt pid names=pid.x\nsetp pid.x.Pgain [JOINT_0]GAIN\n');
+    const aUri = write('MachineA.ini', '[EMC]\nMACHINE = A\n[JOINT_0]\nGAIN = 1\n[HAL]\nHALFILE = shared.hal\n');
+    const bUri = write('MachineB.ini', '[EMC]\nMACHINE = B\n[JOINT_0]\nP = 1\n[HAL]\nHALFILE = shared.hal\n');
+
+    const project = new Project(() => undefined, () => undefined);
+    project.indexIni(aUri);
+    project.indexIni(bUri);
+    const halUri = URI.file(path.join(dir, 'shared.hal')).toString();
+    const owners = project.machinesForHal(halUri);
+    expect(owners).toContain(aUri);
+    expect(owners).toContain(bUri);
+
+    const keyMissing = (ini: string) =>
+      [...crossFileDiagnostics(project.buildModel(ini, index)!, index).values()].flat()
+        .some((d) => d.code === 'hal.iniref.keyMissing' && d.message.includes('GAIN'));
+    expect(keyMissing(aUri)).toBe(false); // A defines GAIN
+    expect(keyMissing(bUri)).toBe(true); // B does not -> would be the false error if B is picked
+
+    // Pinning MachineA selects A even if B sorts first.
+    const active = resolveActiveMachine('MachineA.ini', project.allIniUris());
+    expect(pickMachine(owners, active)).toBe(aUri);
   });
 });

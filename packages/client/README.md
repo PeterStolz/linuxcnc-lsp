@@ -27,3 +27,8 @@ Language support for **LinuxCNC** configuration files: `.hal` (HAL), `.ini`
 
 Open a folder containing your machine config (`.ini` + `.hal` files) for the
 cross-file features to work.
+
+If a `.hal` file is shared by **two machines** (two `.ini` files), pin which one
+provides its context with the **LinuxCNC: Select Active Machine** command (or the
+`linuxcnc.activeMachine` setting). Diagnostics, hover, navigation and completion
+then use the pinned machine instead of an arbitrary one.

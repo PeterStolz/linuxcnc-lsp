@@ -32,10 +32,49 @@ async function maybeAssignIni(doc: TextDocument): Promise<void> {
   }
 }
 
+/** Quick-pick a machine INI and pin it as `linuxcnc.activeMachine` — used when a
+ *  `.hal` file is shared by more than one machine. */
+async function selectActiveMachine(): Promise<void> {
+  const files = await vscode.workspace.findFiles('**/*.ini', '**/node_modules/**', 2000);
+  const machineInis: { uri: vscode.Uri; rel: string }[] = [];
+  for (const uri of files) {
+    try {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const text = Buffer.from(bytes).toString('utf8');
+      if (MACHINE_SECTION.test(text.length > 20000 ? text.slice(0, 20000) : text)) {
+        machineInis.push({ uri, rel: vscode.workspace.asRelativePath(uri) });
+      }
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  if (machineInis.length === 0) {
+    void vscode.window.showInformationMessage('LinuxCNC: no machine .ini files found in this workspace.');
+    return;
+  }
+  const cfg = vscode.workspace.getConfiguration('linuxcnc');
+  const current = cfg.get<string>('activeMachine', '');
+  const items: vscode.QuickPickItem[] = [
+    { label: '$(clear-all) None (use the first machine found)', description: current ? '' : 'current' },
+    ...machineInis.map((m) => ({ label: m.rel, description: current && m.rel.endsWith(current) ? 'current' : '' })),
+  ];
+  const pick = await vscode.window.showQuickPick(items, {
+    title: 'Pin the active machine for shared HAL files',
+    placeHolder: 'Diagnostics, hover, go-to-definition and completion will use this machine',
+  });
+  if (!pick) return;
+  const value = pick.label.startsWith('$(clear-all)') ? '' : pick.label;
+  await cfg.update('activeMachine', value, vscode.ConfigurationTarget.Workspace);
+  void vscode.window.showInformationMessage(
+    value ? `LinuxCNC active machine: ${value}` : 'LinuxCNC active machine cleared.',
+  );
+}
+
 export function activate(context: ExtensionContext): void {
   // Content-based detection for .ini machine configs.
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((d) => void maybeAssignIni(d)),
+    vscode.commands.registerCommand('linuxcnc.selectActiveMachine', () => void selectActiveMachine()),
   );
   for (const d of vscode.workspace.textDocuments) void maybeAssignIni(d);
   const serverModule = context.asAbsolutePath(path.join('dist', 'server.js'));
