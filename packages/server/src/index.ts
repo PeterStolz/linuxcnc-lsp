@@ -248,7 +248,7 @@ connection.onDefinition((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
-  const model = modelForHal(doc.uri);
+  const model = modelForUri(doc.uri);
   if (!model) return null;
   return definition(model, doc.uri, offset);
 });
@@ -257,7 +257,7 @@ connection.onReferences((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
-  const model = modelForHal(doc.uri);
+  const model = modelForUri(doc.uri);
   if (!model) return null;
   return references(model, doc.uri, offset, params.context?.includeDeclaration ?? true);
 });
@@ -266,7 +266,7 @@ connection.onDocumentHighlight((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
   const offset = doc.offsetAt(params.position);
-  const model = modelForHal(doc.uri);
+  const model = modelForUri(doc.uri);
   if (!model) return null;
   return documentHighlights(model, doc.uri, offset);
 });

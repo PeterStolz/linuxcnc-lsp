@@ -5,7 +5,7 @@ import {
   IniFile,
 } from '@linuxcnc/core';
 import { MetadataIndex } from '../db';
-import { ComponentDef, PinDef, ParamDef } from '../types';
+import { ComponentDef, PinDef, ParamDef, FuncDef } from '../types';
 
 function md(value: string, range?: Range): Hover {
   return { contents: { kind: MarkupKind.Markdown, value }, range };
@@ -127,20 +127,66 @@ function componentHover(name: string, index: MetadataIndex, r: Range): Hover | n
   return md(renderComponent(c), r);
 }
 
+/** Max rows shown per pin/param/function section before truncating, so a
+ *  component with hundreds of members (e.g. a driver) can't blow up the hover. */
+const MAX_MEMBER_ROWS = 50;
+
 function renderComponent(c: ComponentDef): string {
   const lines: string[] = [`### \`${c.name}\` (HAL component)`];
   if (c.description) lines.push('', c.description);
-  else if (c.descriptionMd) lines.push('', c.descriptionMd.split('\n').slice(0, 6).join('\n'));
+  else if (c.descriptionMd) lines.push('', c.descriptionMd.split('\n').slice(0, 8).join('\n'));
+
   const counts: string[] = [];
   if (c.pins.length) counts.push(`${c.pins.length} pins`);
-  if (c.params.length) counts.push(`${c.params.length} parameters`);
-  if (c.functions.length) counts.push(`${c.functions.length} functions`);
+  if (c.params.length) counts.push(`${c.params.length} parameter${c.params.length === 1 ? '' : 's'}`);
+  if (c.functions.length) counts.push(`${c.functions.length} function${c.functions.length === 1 ? '' : 's'}`);
   if (counts.length) lines.push('', `_${counts.join(' · ')}_`);
+
+  if (c.pins.length) lines.push('', '**Pins**', '', ...memberTable(c.pins));
+  if (c.params.length) lines.push('', '**Parameters**', '', ...memberTable(c.params));
+  const fns = renderFunctions(c.functions);
+  if (fns.length) lines.push('', '**Functions**', '', ...fns);
+
   if (c.modparams.length) {
     lines.push('', '**loadrt parameters:** ' + c.modparams.map((m) => `\`${m.name}\``).join(', '));
   }
+
+  const footer: string[] = [];
+  if (c.author) footer.push(`Author: ${c.author}`);
+  if (c.license) footer.push(`License: ${c.license}`);
+  if (footer.length) lines.push('', `_${footer.join(' · ')}_`);
   if (c.seeAlso) lines.push('', `See also: ${c.seeAlso}`);
   return lines.join('\n');
+}
+
+/** Sanitize free text for a single GFM table cell: collapse newlines/runs of
+ *  whitespace to single spaces and escape the pipe delimiter. */
+function cell(s: string | undefined): string {
+  return s ? s.replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim() : '';
+}
+
+/** Render pins or params as a GFM table (Name · Type · Dir · Description). */
+function memberTable(members: Array<PinDef | ParamDef>): string[] {
+  const rows = ['| Name | Type | Dir | Description |', '| --- | --- | --- | --- |'];
+  for (const m of members.slice(0, MAX_MEMBER_ROWS)) {
+    rows.push(`| \`${m.name}\` | ${m.type} | ${m.dir} | ${cell(m.doc)} |`);
+  }
+  if (members.length > MAX_MEMBER_ROWS) {
+    rows.push(`| … | | | _${members.length - MAX_MEMBER_ROWS} more_ |`);
+  }
+  return rows;
+}
+
+function renderFunctions(fns: FuncDef[]): string[] {
+  const out: string[] = [];
+  for (const f of fns.slice(0, MAX_MEMBER_ROWS)) {
+    const fpNote = f.fp === false ? ' _(no floating point)_' : f.fp ? ' _(uses floating point)_' : '';
+    const label = f.name ? `\`${f.name}\`` : '_(unnamed — addf the instance itself)_';
+    const scope = f.global ? ' · global' : '';
+    out.push(`- ${label}${fpNote}${scope}${f.doc ? ` — ${cell(f.doc)}` : ''}`);
+  }
+  if (fns.length > MAX_MEMBER_ROWS) out.push(`- _… ${fns.length - MAX_MEMBER_ROWS} more_`);
+  return out;
 }
 
 function signalHover(name: string, r: Range): Hover {
@@ -208,18 +254,40 @@ function iniRefHover(token: HalToken, index: MetadataIndex, lineIndex: LineIndex
   return md(renderIniKey(section, key, index), range(lineIndex, token));
 }
 
-function renderIniKey(section: string, key: string, index: MetadataIndex): string {
+/** Human-readable label for a documented INI value type. */
+function typeLabel(type: string): string {
+  const t = type.toLowerCase();
+  const map: Record<string, string> = {
+    real: 'real — a floating-point number (e.g. `3.5`, `1e-6`)',
+    int: 'int — a whole number (e.g. `4`)',
+    u32: 'u32 — a non-negative whole number',
+    u64: 'u64 — a non-negative whole number',
+    s32: 's32 — a whole number',
+    s64: 's64 — a whole number',
+    bool: 'bool — `1`/`0`, `TRUE`/`FALSE` or `YES`/`NO`',
+    bit: 'bit — `1` or `0`',
+    string: 'string — free text',
+    enum: 'enum — one of a fixed set of values (see below)',
+  };
+  return map[t] ?? type;
+}
+
+function renderIniKey(section: string, key: string, index: MetadataIndex, value?: string): string {
   // Homing keys get the full docs section rendered.
   const homing = index.homingDoc(key);
   if (homing && /^JOINT_/i.test(section)) {
-    return `### \`[${section}]${key}\` (homing)\n\n${homing}`;
+    const lines = [`### \`[${section}]${key}\` (homing)`];
+    if (value !== undefined) lines.push('', `Value: \`${value}\``);
+    lines.push('', homing);
+    return lines.join('\n');
   }
   const def = index.iniKey(section, key);
   const lines = [`### \`[${section}]${key}\``];
-  if (def?.type) lines.push('', `_type: ${def.type}_`);
+  if (value !== undefined) lines.push('', `Value: \`${value}\``);
+  if (def?.type) lines.push('', `_type: ${typeLabel(def.type)}_`);
   if (def?.docMd) lines.push('', def.docMd);
   else if (def?.doc) lines.push('', def.doc);
-  else lines.push('', `_INI variable referenced from HAL._`);
+  else lines.push('', `_Custom INI variable (not part of the documented LinuxCNC schema)._`);
   return lines.join('\n');
 }
 
@@ -248,7 +316,7 @@ export function hoverIni(
     if (offset < section.start || offset > section.end) continue;
     for (const entry of section.entries) {
       if (offset >= entry.key.start && offset <= entry.key.end) {
-        let body = renderIniKey(section.name.text, entry.key.text, index);
+        let body = renderIniKey(section.name.text, entry.key.text, index, entry.value?.text);
         if (refCount) {
           body += '\n\n' + iniRefAnnotation(section.name.text, entry.key.text, index, refCount);
         }

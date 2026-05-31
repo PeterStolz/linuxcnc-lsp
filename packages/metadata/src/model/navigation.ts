@@ -87,7 +87,7 @@ export function definition(model: MachineModel, uri: string, offset: number): Lo
     return def ? [def] : [];
   }
   if (loc.kind === 'iniref') {
-    return iniKeyLocations(model, loc.section, loc.key);
+    return iniEntryLocations(model, loc.section, loc.key);
   }
   if (loc.kind === 'pin') {
     // Definition of a pin = the loadrt line that created its instance.
@@ -102,10 +102,31 @@ export function definition(model: MachineModel, uri: string, offset: number): Lo
   return [];
 }
 
+/** Identify the INI key under `offset` in INI file `uri` (the main INI or an
+ *  #INCLUDE-d file), or undefined if not on a key. */
+function locateIniKey(model: MachineModel, uri: string, offset: number): { section: string; key: string; range: import('vscode-languageserver-types').Range } | undefined {
+  for (const ini of [model.ini, ...model.iniIncludes]) {
+    if (!ini || ini.uri !== uri) continue;
+    for (const section of ini.ini.sections) {
+      if (offset < section.start || offset > section.end) continue;
+      for (const entry of section.entries) {
+        if (offset >= entry.key.start && offset <= entry.key.end) {
+          return { section: section.name.text, key: entry.key.text, range: ini.lineIndex.rangeAt(entry.key.start, entry.key.end) };
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 /** Find references for the symbol at `offset` in file `uri`. */
 export function references(model: MachineModel, uri: string, offset: number, includeDecl = true): Location[] {
   const file = model.files.find((f) => f.uri === uri);
-  if (!file) return [];
+  if (!file) {
+    // INI document: references of the key under the cursor.
+    const iniHit = locateIniKey(model, uri, offset);
+    return iniHit ? iniReferences(model, iniHit.section, iniHit.key, includeDecl) : [];
+  }
   const loc = locateHal(file.hal, offset);
   if (!loc) return [];
 
@@ -119,18 +140,7 @@ export function references(model: MachineModel, uri: string, offset: number, inc
     return all;
   }
   if (loc.kind === 'iniref') {
-    const out: Location[] = [];
-    for (const f of model.files) {
-      for (const stmt of f.hal.statements) {
-        for (const ref of collectIniRefs(stmt)) {
-          if (eqi(ref.ini!.section, loc.section) && eqi(ref.ini!.key, loc.key)) {
-            out.push({ uri: f.uri, range: f.lineIndex.rangeAt(ref.start, ref.end) });
-          }
-        }
-      }
-    }
-    if (includeDecl) out.push(...iniKeyLocations(model, loc.section, loc.key));
-    return out;
+    return iniReferences(model, loc.section, loc.key, includeDecl);
   }
   if (loc.kind === 'pin') {
     return scanPinOccurrences(model.files, loc.name);
@@ -138,10 +148,25 @@ export function references(model: MachineModel, uri: string, offset: number, inc
   return [];
 }
 
+/** All references to an INI key: every HAL `[SEC]KEY` use + (optionally) the
+ *  INI entry declaration(s). */
+function iniReferences(model: MachineModel, section: string, key: string, includeDecl: boolean): Location[] {
+  const out = iniRefsTo(model, section, key);
+  if (includeDecl) out.push(...iniEntryLocations(model, section, key));
+  return out;
+}
+
 /** Same-symbol highlights within a single file. */
 export function documentHighlights(model: MachineModel, uri: string, offset: number): DocumentHighlight[] {
   const file = model.files.find((f) => f.uri === uri);
-  if (!file) return [];
+  if (!file) {
+    // INI document: highlight every occurrence of the key in this INI file.
+    const iniHit = locateIniKey(model, uri, offset);
+    if (!iniHit) return [];
+    return iniEntryLocations(model, iniHit.section, iniHit.key)
+      .filter((l) => l.uri === uri)
+      .map((l) => ({ range: l.range, kind: DocumentHighlightKind.Text }));
+  }
   const loc = locateHal(file.hal, offset);
   if (!loc) return [];
   if (loc.kind === 'signal') {
@@ -179,14 +204,18 @@ export function iniRefsTo(model: MachineModel, section: string, key: string): Lo
   return out;
 }
 
-function iniKeyLocations(model: MachineModel, section: string, key: string): Location[] {
-  if (!model.ini) return [];
-  const sec = findSection(model.ini.ini, section);
-  if (!sec) return [];
-  return findEntries(sec, key).map((e) => ({
-    uri: model.ini!.uri,
-    range: model.ini!.lineIndex.rangeAt(e.key.start, e.key.end),
-  }));
+/** Every INI entry declaring `section`/`key`, across the main INI and #INCLUDEs. */
+function iniEntryLocations(model: MachineModel, section: string, key: string): Location[] {
+  const out: Location[] = [];
+  for (const ini of [model.ini, ...model.iniIncludes]) {
+    if (!ini) continue;
+    const sec = findSection(ini.ini, section);
+    if (!sec) continue;
+    for (const e of findEntries(sec, key)) {
+      out.push({ uri: ini.uri, range: ini.lineIndex.rangeAt(e.key.start, e.key.end) });
+    }
+  }
+  return out;
 }
 
 function scanPinOccurrences(files: HalFileInput[], pinName: string): Location[] {

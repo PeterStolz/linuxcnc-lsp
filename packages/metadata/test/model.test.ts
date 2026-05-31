@@ -3,7 +3,7 @@ import * as path from 'path';
 import { parseHal, parseIni, LineIndex } from '@linuxcnc/core';
 import {
   loadDBFromFile, MetadataIndex, buildMachineModel, crossFileDiagnostics,
-  definition, references, HalFileInput, IniFileInput,
+  definition, references, documentHighlights, HalFileInput, IniFileInput,
 } from '../src/index';
 
 const DB = path.resolve(__dirname, '../data/db.json');
@@ -119,5 +119,37 @@ describe('navigation', () => {
     const off = MAIN.indexOf('[JOINT_0]P') + 2;
     const defs = definition(m, 'file:///main.hal', off);
     expect(defs[0]?.uri).toBe('file:///m.ini');
+  });
+
+  it('find-references from the INI key finds the HAL usage + the declaration', () => {
+    const m = model();
+    const off = INI.indexOf('P = 1000'); // the 'P' key in [JOINT_0]
+    const refs = references(m, 'file:///m.ini', off);
+    const uris = refs.map((r) => r.uri);
+    expect(uris).toContain('file:///main.hal'); // [JOINT_0]P used in HAL
+    expect(uris).toContain('file:///m.ini'); // the declaration
+  });
+
+  it('find-references from the INI excludes the declaration when asked', () => {
+    const m = model();
+    const off = INI.indexOf('P = 1000');
+    const refs = references(m, 'file:///m.ini', off, false);
+    expect(refs.every((r) => r.uri === 'file:///main.hal')).toBe(true);
+    expect(refs.length).toBe(1);
+  });
+
+  it('find-references from an unreferenced INI key returns just the declaration', () => {
+    const m = model();
+    const off = INI.indexOf('STEP_SCALE');
+    const refs = references(m, 'file:///m.ini', off);
+    expect(refs.length).toBe(1);
+    expect(refs[0].uri).toBe('file:///m.ini');
+  });
+
+  it('document highlights an INI key within the INI file', () => {
+    const m = model();
+    const off = INI.indexOf('P = 1000');
+    const hls = documentHighlights(m, 'file:///m.ini', off);
+    expect(hls.length).toBeGreaterThanOrEqual(1);
   });
 });

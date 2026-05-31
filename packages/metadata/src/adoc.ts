@@ -54,6 +54,11 @@ export function adocToMarkdown(adoc: string): string {
 /** Inline markup conversions. */
 function inline(s: string): string {
   let r = s;
+  // inline/block images: image:path[attrs] / image::path[attrs] -> dropped
+  // (the images live in the docs tree and don't resolve inside a hover).
+  r = r.replace(/image::?[^\s\[]+\[[^\]]*\]/g, '').replace(/,\s*$/, '');
+  // superscript ^x^ / subscript ~x~ -> plain text (no markdown equivalent)
+  r = r.replace(/\^(\S+?)\^/g, '$1');
   // links:  link:page[label]  /  https://x[label]
   r = r.replace(/link:(\S+?)\[([^\]]*)\]/g, (_m, u, label) => label || u);
   r = r.replace(/(https?:\/\/[^\s[]+)\[([^\]]*)\]/g, (_m, url, label) => `[${label || url}](${url})`);

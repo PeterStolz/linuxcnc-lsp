@@ -35,6 +35,20 @@ describe('HAL hover', () => {
     expect(value(h).toLowerCase()).toContain('scale and offset');
   });
 
+  it('renders a component hover with full pin/param/function detail', () => {
+    const v = value(hHal('loadrt mux2', 'mux2'));
+    // Pin table with names, types, directions and the bundled doc string.
+    expect(v).toContain('**Pins**');
+    expect(v).toContain('`out`');
+    expect(v).toContain('float');
+    expect(v).toContain('Follows the value of');
+    // Params section with the rw/ro direction.
+    expect(v).toContain('**Parameters**');
+    expect(v).toContain('`tmax`');
+    // Author/license footer.
+    expect(v).toContain('Jeff Epler');
+  });
+
   it('hovers a pin on a default-named instance', () => {
     const h = hHal('setp scale.0.gain 2.0', 'scale.0.gain');
     expect(value(h)).toContain('float');
@@ -79,6 +93,26 @@ describe('INI hover', () => {
   it('renders homing docs when hovering a homing key in a JOINT section', () => {
     const h = hIni('[JOINT_0]\nHOME_SEARCH_VEL = 20', 'HOME_SEARCH_VEL');
     expect(value(h)).toContain('machine-units per second');
+  });
+
+  it('shows the assigned value and a friendly type label', () => {
+    const h = hIni('[JOINT_0]\nTYPE = LINEAR', 'TYPE');
+    expect(value(h)).toContain('Value: `LINEAR`');
+    expect(value(h)).toContain('fixed set'); // enum -> "one of a fixed set of values"
+  });
+
+  it('labels a custom (non-schema) key clearly instead of "referenced from HAL"', () => {
+    const h = hIni('[JOINT_0]\nSTEPSPACE = 5000', 'STEPSPACE');
+    expect(value(h)).toContain('Value: `5000`');
+    expect(value(h)).toContain('Custom INI variable');
+    expect(value(h)).not.toContain('referenced from HAL');
+  });
+
+  it('does not leave raw asciidoc (superscript / image macros) in a key doc', () => {
+    const h = hIni('[JOINT_0]\nFF2 = 0', 'FF2');
+    expect(value(h)).not.toContain('^nd^');
+    expect(value(h)).not.toContain('image:');
+    expect(value(h)).toContain('feed forward');
   });
 });
 

@@ -51,8 +51,7 @@ function parseKeyBullets(body: string): IniKeyDef[] {
       let rest = stripMacros(m[3]);
       let type: string | undefined;
       const typeM = /^\(([^)]+)\)\s*(.*)$/.exec(rest);
-      if (typeM) {
-        type = typeM[1];
+      if (typeM && (type = normalizeType(typeM[1]))) {
         rest = typeM[2];
       }
       current = {
@@ -87,6 +86,22 @@ export function extractHoming(adoc: string): Record<string, string> {
 
 function stripMacros(s: string): string {
   return s.replace(/\(\(\([^)]*\)\)\)/g, '').trim();
+}
+
+/** Only treat a leading `(...)` as a type annotation when it is a recognized
+ *  type token — avoids capturing parentheticals like `(Default: 0)` as a type.
+ *  Returns the normalized type, or undefined if not a type. */
+function normalizeType(raw: string): string | undefined {
+  const t = raw.trim().toLowerCase();
+  const map: Record<string, string> = {
+    bool: 'bool', boolean: 'bool',
+    int: 'int', integer: 'int',
+    real: 'real', float: 'real', number: 'real',
+    string: 'string', text: 'string',
+    enum: 'enum',
+    u32: 'u32', u64: 'u64', s32: 's32', s64: 's64', bit: 'bit',
+  };
+  return map[t];
 }
 
 function firstParagraph(body: string): string {
