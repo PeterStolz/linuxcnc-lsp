@@ -19,7 +19,14 @@ export function buildMachineModel({ iniInput, iniIncludes, files, index, hasOpaq
   const signals = new Map<string, SignalNode>();
   const aliases = new Map<string, string>();
 
-  const ordered = [...files].sort((a, b) => a.order - b.order);
+  // Dedupe by uri (an INI can list the same HAL file twice, e.g. as both a
+  // HALFILE and a POSTGUI_HALFILE). LinuxCNC loads it once; counting its
+  // occurrences twice would double signal writers/readers and produce
+  // duplicate/overlapping rename edits and references.
+  const seenUris = new Set<string>();
+  const ordered = [...files]
+    .sort((a, b) => a.order - b.order)
+    .filter((f) => (seenUris.has(f.uri) ? false : (seenUris.add(f.uri), true)));
 
   // Pass 1: collect component instances from loadrt statements.
   for (const f of ordered) {

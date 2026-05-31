@@ -20807,7 +20807,7 @@
   "G96": {
    "code": "G96",
    "title": "Spindle Control Mode, Constant Surface vs Rotation Speed (IPM or m/min vs RPM)",
-   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\n'G96 S- <D->' - selects constant surface speed of 'S':"
+   "docMd": "```ngc\nG96 <D-> S- <$-> (Constant Surface Speed Mode)\nG97 S- <$-> (RPM Mode)\n```\n\nWhen using G96, ensure that X0 in the current coordinate system (including offsets and tool lengths) is the center of rotation or LinuxCNC will not give the desired surface speed. G96 is not affected by radius or diameter mode."
   },
   "G97": {
    "code": "G97",
@@ -20831,8 +20831,8 @@
   },
   "M1": {
    "code": "M1",
-   "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```\n\n'M1--' - an integer in the range of 100 - 199."
+   "title": "Program Pause",
+   "docMd": "'M1' - pause a running program temporarily if the optional stop switch is on. LinuxCNC remains in the Auto Mode so MDI and other manual actions are not enabled. Pressing the resume button will restart the program at the following line."
   },
   "M2": {
    "code": "M2",
@@ -20847,22 +20847,22 @@
   "M60": {
    "code": "M60",
    "title": "Pallet Change Pause",
-   "docMd": ""
+   "docMd": "temporarily (regardless of the setting of the optional stop switch). Pressing the cycle start button will restart the program at the following line."
   },
   "M3": {
    "code": "M3",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M3 [$n]' - start the selected spindle clockwise at the 'S' speed."
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\nUse $ to operate on specific spindles. If $ is omitted then the commands default to operating on spindle 0. Use $-1 to operate on all active spindles."
   },
   "M4": {
    "code": "M4",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M4 [$n]' - start the selected spindle counterclockwise at the 'S' speed."
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\nUse $ to operate on specific spindles. If $ is omitted then the commands default to operating on spindle 0. Use $-1 to operate on all active spindles."
   },
   "M5": {
    "code": "M5",
    "title": "Spindle Control",
-   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\n'M5 [$n]' - stop the selected spindle."
+   "docMd": "```ngc\nS100 $0\nS200 $1\nS300 $2\nM3 $-1\n```\n\nUse $ to operate on specific spindles. If $ is omitted then the commands default to operating on spindle 0. Use $-1 to operate on all active spindles."
   },
   "M6": {
    "code": "M6",
@@ -20887,7 +20887,7 @@
   "M19": {
    "code": "M19",
    "title": "Orient Spindle",
-   "docMd": "```ngc\nM19 R- Q- [P-] [$-]\n```"
+   "docMd": "```ngc\nM19 R- Q- [P-] [$-]\n```\n\nspindle.N.is-oriented does not become true within Q timeout an error occurs."
   },
   "M48": {
    "code": "M48",
@@ -20902,62 +20902,62 @@
   "M50": {
    "code": "M50",
    "title": "Feed Override Control",
-   "docMd": ""
+   "docMd": "is optional."
   },
   "M51": {
    "code": "M51",
    "title": "Spindle Override Control",
-   "docMd": ""
+   "docMd": "selected spindle. The  P1 is optional."
   },
   "M52": {
    "code": "M52",
    "title": "Adaptive Feed Control",
-   "docMd": ""
+   "docMd": "When adaptive feed is enabled, some external input value is used together with the user interface feed override value and the commanded feed rate to set the actual feed rate. In LinuxCNC, the HAL pin 'motion.adaptive-feed' is used for this purpose. The range for 'motion.adaptive-feed' is defined by the MAX_FEED_OVERRIDE value in the [DISPLAY] section of the ini file and will be limited to a range of -MAX_FEED_OVERRIDE to MAX_FEED_OVERRIDE. 0 is equivalent to feed-hold."
   },
   "M53": {
    "code": "M53",
    "title": "Feed Stop Control",
-   "docMd": ""
+   "docMd": "Enabling the feed stop switch will allow motion to be interrupted by means of the feed stop control. In LinuxCNC, the HAL pin 'motion.feed-hold' is used for this purpose. A 'true' value will cause the motion to stop when 'M53' is active."
   },
   "M61": {
    "code": "M61",
    "title": "Set Current Tool Number",
-   "docMd": ""
+   "docMd": "a tool change. One use is when you power up LinuxCNC with a tool currently in the spindle you can set that tool number without doing a tool change."
   },
   "M62": {
    "code": "M62",
    "title": "Output Control",
-   "docMd": "'M62 P-' - turn on digital output synchronized with motion."
+   "docMd": "The P- word specifies the digital output number. The P-word ranges from 0 to a default value of 3. If needed the the number of I/O can be increased by using the num_dio parameter when loading the motion controller. See the Motion section for more information."
   },
   "M63": {
    "code": "M63",
    "title": "Output Control",
-   "docMd": "'M63 P-' - turn off digital output synchronized with motion."
+   "docMd": "The P- word specifies the digital output number. The P-word ranges from 0 to a default value of 3. If needed the the number of I/O can be increased by using the num_dio parameter when loading the motion controller. See the Motion section for more information."
   },
   "M64": {
    "code": "M64",
    "title": "Output Control",
-   "docMd": "'M64 P-' - turn on digital output immediately."
+   "docMd": "The P- word specifies the digital output number. The P-word ranges from 0 to a default value of 3. If needed the the number of I/O can be increased by using the num_dio parameter when loading the motion controller. See the Motion section for more information."
   },
   "M65": {
    "code": "M65",
    "title": "Output Control",
-   "docMd": "'M65 P-' - turn off digital output immediately."
+   "docMd": "The P- word specifies the digital output number. The P-word ranges from 0 to a default value of 3. If needed the the number of I/O can be increased by using the num_dio parameter when loading the motion controller. See the Motion section for more information."
   },
   "M66": {
    "code": "M66",
    "title": "Input Control",
-   "docMd": "```ngc\nM66 P- | E- <L->\n```"
+   "docMd": "```ngc\nM66 P- | E- <L->\n```\n\nThe current value of the input is stored in parameter #5399"
   },
   "M67": {
    "code": "M67",
    "title": "Analog Output Control",
-   "docMd": "```ngc\nM67 E- Q-\n```"
+   "docMd": "```ngc\nM67 E- Q-\n```\n\nThe actual change of the specified outputs will happen at the beginning of the next motion command. If there is no subsequent motion command, the queued output changes won't happen. It's best to always program a motion G-code (G0, G1, etc) right after the M67. M67 functions the same as M62-63."
   },
   "M68": {
    "code": "M68",
    "title": "Analog Output Control",
-   "docMd": "```ngc\nM68 E- Q-\n```"
+   "docMd": "```ngc\nM68 E- Q-\n```\n\nM68 output happen immediately as they are received by the motion controller. They are not synchronized with movement, and they will break blending. M68 functions the same as M64-65."
   },
   "M70": {
    "code": "M70",
@@ -20992,502 +20992,502 @@
   "M100": {
    "code": "M100",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M101": {
    "code": "M101",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M102": {
    "code": "M102",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M103": {
    "code": "M103",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M104": {
    "code": "M104",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M105": {
    "code": "M105",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M106": {
    "code": "M106",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M107": {
    "code": "M107",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M108": {
    "code": "M108",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M109": {
    "code": "M109",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M110": {
    "code": "M110",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M111": {
    "code": "M111",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M112": {
    "code": "M112",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M113": {
    "code": "M113",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M114": {
    "code": "M114",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M115": {
    "code": "M115",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M116": {
    "code": "M116",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M117": {
    "code": "M117",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M118": {
    "code": "M118",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M119": {
    "code": "M119",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M120": {
    "code": "M120",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M121": {
    "code": "M121",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M122": {
    "code": "M122",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M123": {
    "code": "M123",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M124": {
    "code": "M124",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M125": {
    "code": "M125",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M126": {
    "code": "M126",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M127": {
    "code": "M127",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M128": {
    "code": "M128",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M129": {
    "code": "M129",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M130": {
    "code": "M130",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M131": {
    "code": "M131",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M132": {
    "code": "M132",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M133": {
    "code": "M133",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M134": {
    "code": "M134",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M135": {
    "code": "M135",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M136": {
    "code": "M136",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M137": {
    "code": "M137",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M138": {
    "code": "M138",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M139": {
    "code": "M139",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M140": {
    "code": "M140",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M141": {
    "code": "M141",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M142": {
    "code": "M142",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M143": {
    "code": "M143",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M144": {
    "code": "M144",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M145": {
    "code": "M145",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M146": {
    "code": "M146",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M147": {
    "code": "M147",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M148": {
    "code": "M148",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M149": {
    "code": "M149",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M150": {
    "code": "M150",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M151": {
    "code": "M151",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M152": {
    "code": "M152",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M153": {
    "code": "M153",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M154": {
    "code": "M154",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M155": {
    "code": "M155",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M156": {
    "code": "M156",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M157": {
    "code": "M157",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M158": {
    "code": "M158",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M159": {
    "code": "M159",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M160": {
    "code": "M160",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M161": {
    "code": "M161",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M162": {
    "code": "M162",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M163": {
    "code": "M163",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M164": {
    "code": "M164",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M165": {
    "code": "M165",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M166": {
    "code": "M166",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M167": {
    "code": "M167",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M168": {
    "code": "M168",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M169": {
    "code": "M169",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M170": {
    "code": "M170",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M171": {
    "code": "M171",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M172": {
    "code": "M172",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M173": {
    "code": "M173",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M174": {
    "code": "M174",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M175": {
    "code": "M175",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M176": {
    "code": "M176",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M177": {
    "code": "M177",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M178": {
    "code": "M178",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M179": {
    "code": "M179",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M180": {
    "code": "M180",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M181": {
    "code": "M181",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M182": {
    "code": "M182",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M183": {
    "code": "M183",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M184": {
    "code": "M184",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M185": {
    "code": "M185",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M186": {
    "code": "M186",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M187": {
    "code": "M187",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M188": {
    "code": "M188",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M189": {
    "code": "M189",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M190": {
    "code": "M190",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M191": {
    "code": "M191",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M192": {
    "code": "M192",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M193": {
    "code": "M193",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M194": {
    "code": "M194",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M195": {
    "code": "M195",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M196": {
    "code": "M196",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M197": {
    "code": "M197",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M198": {
    "code": "M198",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "M199": {
    "code": "M199",
    "title": "User Defined M-Codes",
-   "docMd": "```ngc\nM1-- <P- Q->\n```"
+   "docMd": "```ngc\nM1-- <P- Q->\n```\n\nAfter creating a new 'M1nn' file you must restart the GUI so it is aware of the new file, otherwise you will get an 'Unknown m code' error."
   },
   "F": {
    "code": "F",

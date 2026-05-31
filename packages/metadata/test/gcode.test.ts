@@ -85,6 +85,13 @@ describe('extractGcode', () => {
     expect(w.M5.docMd).toContain('clockwise');
   });
 
+  it('clamps an absurd decimal range instead of expanding unbounded (round-3 #2)', () => {
+    const t0 = Date.now();
+    const w = extractGcode('|<<gcode:x,G0.0-G0.5000000>> |Title', '', '');
+    expect(Date.now() - t0).toBeLessThan(500);
+    expect(Object.keys(w).length).toBeLessThan(100); // endpoints only, not 5M keys
+  });
+
   it('handles single-letter words from other-code (F/S/T)', () => {
     expect(w.F.title).toBe('Set Feed Rate');
     expect(w.F.docMd).toContain('feed rate');

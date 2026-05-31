@@ -79,8 +79,11 @@ export function diagnoseIniIntraFile(
 
   // QtVCP/panelui configs use configobj nested sections ([[...]]) and reuse the
   // .ini extension, but they are NOT LinuxCNC machine INIs. Skip structural
-  // diagnostics for them rather than flagging valid configobj syntax.
-  if (/^\s*\[\[/m.test(text)) return [];
+  // diagnostics for them. Detect via parsed SECTION HEADERS (the parser reads a
+  // `[[nested]]` header as a section whose name starts with `[`) rather than a
+  // raw-text regex — a value-continuation line that merely starts with `[[`
+  // must not suppress diagnostics for the whole file.
+  if (file.sections.some((s) => s.name.text.startsWith('['))) return [];
 
   // Syntax problems surfaced by the parser.
   for (const p of file.problems) {

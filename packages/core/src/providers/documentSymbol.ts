@@ -95,7 +95,14 @@ export function halDocumentSymbols(file: HalFile, lineIndex: LineIndex): Documen
 export function iniDocumentSymbols(file: IniFile, lineIndex: LineIndex): DocumentSymbol[] {
   return file.sections.map((section) => {
     const headerRange = lineIndex.rangeAt(section.headerStart, section.headerEnd);
-    const fullRange = lineIndex.rangeAt(section.start, Math.max(section.end - 1, section.start));
+    // Trim a trailing newline only when one is actually present (else the last
+    // section in a file without a trailing newline would end before its own
+    // entries, producing child ranges outside the parent).
+    let endOff = section.end;
+    const last = lineIndex.text.charCodeAt(endOff - 1);
+    if (endOff > section.start && (last === 10 || last === 13)) endOff--;
+    endOff = Math.max(endOff, section.headerEnd);
+    const fullRange = lineIndex.rangeAt(section.start, endOff);
     const children = section.entries.map((e) =>
       sym(
         e.key.text,
