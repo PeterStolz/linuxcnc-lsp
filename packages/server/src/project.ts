@@ -29,6 +29,9 @@ export class Project {
   constructor(
     private readonly getText: (uri: string) => string | undefined,
     private readonly libDir: () => string | undefined,
+    /** Max directory depth for the workspace scan (configurable via
+     *  `linuxcnc.scan.maxDepth`); deep monorepos need more than the default. */
+    private readonly maxDepth: () => number = () => 5,
   ) {}
 
   /** Scan workspace roots for .ini and .ngc files and (re)build associations. */
@@ -37,29 +40,56 @@ export class Project {
     this.halToInis.clear();
     this.iniToSubDirs.clear();
     this.ngcByBasename.clear();
+    const depth = this.maxDepth();
     for (const root of roots) {
-      for (const iniPath of findFilesByExt(root, '.ini')) {
+      for (const iniPath of findFilesByExt(root, '.ini', depth)) {
         this.indexIni(URI.file(iniPath).toString());
       }
-      for (const ngcPath of findFilesByExt(root, '.ngc')) {
+      for (const ngcPath of findFilesByExt(root, '.ngc', depth)) {
         this.indexNgc(URI.file(ngcPath).toString());
       }
     }
   }
 
-  /** Add a .ngc file to the basename index (for cross-file subroutine lookup). */
+  /** Add a .ngc file to the basename index (for cross-file subroutine lookup).
+   *  Stored canonical (symlink-dereferenced, true-cased) so it matches what the
+   *  resolver returns. */
   indexNgc(ngcUri: string): void {
+    const uri = canonicalizeUri(ngcUri);
+    const base = this.ngcBaseName(uri);
+    if (!base) return;
+    const list = this.ngcByBasename.get(base) ?? [];
+    if (!list.includes(uri)) list.push(uri);
+    this.ngcByBasename.set(base, list);
+  }
+
+  /** Drop a .ngc file from the basename index (file deleted on disk). */
+  removeNgc(ngcUri: string): void {
+    const uri = canonicalizeUri(ngcUri);
+    const base = this.ngcBaseName(uri);
+    if (!base) return;
+    const list = this.ngcByBasename.get(base);
+    if (!list) return;
+    const i = list.indexOf(uri);
+    if (i >= 0) list.splice(i, 1);
+    if (!list.length) this.ngcByBasename.delete(base);
+  }
+
+  /** Canonical form of a file URI (symlink-dereferenced, true-cased), matching how
+   *  indexed and resolved URIs are stored — used to compare URIs across the
+   *  index/resolver boundary. */
+  canonicalUri(uri: string): string {
+    return canonicalizeUri(uri);
+  }
+
+  private ngcBaseName(ngcUri: string): string | undefined {
     let fsPath: string;
     try {
       fsPath = URI.parse(ngcUri).fsPath;
     } catch {
-      return;
+      return undefined;
     }
-    const base = path.basename(fsPath, path.extname(fsPath)).toLowerCase();
-    if (!base) return;
-    const list = this.ngcByBasename.get(base) ?? [];
-    if (!list.includes(ngcUri)) list.push(ngcUri);
-    this.ngcByBasename.set(base, list);
+    return path.basename(fsPath, path.extname(fsPath)).toLowerCase() || undefined;
   }
 
   /** Every workspace .ngc URI (for cross-file find-references). */
@@ -78,32 +108,71 @@ export class Project {
 
   /** Resolve a named subroutine to the .ngc file that defines it, searching the
    *  caller's own directory, the INI search path, then the workspace by
-   *  basename. Returns the file URI, or undefined if not found. */
+   *  basename. Returns the file URI, or undefined if not found.
+   *
+   *  This is the GLOBAL (workspace-wide) resolver, kept for files that belong to
+   *  no indexed config. Prefer `resolveSubroutineScoped` for a file owned by a
+   *  machine config — the global union + basename fallback can otherwise resolve
+   *  a call to another machine's identically-named subroutine. */
   resolveSubroutineFile(fromUri: string, name: string): string | undefined {
-    const lower = name.toLowerCase();
-    const tryDir = (dir: string): string | undefined => {
-      for (const fname of name === lower ? [name + '.ngc'] : [name + '.ngc', lower + '.ngc']) {
-        const uri = URI.file(path.join(dir, fname)).toString();
-        if (this.readText(uri) !== undefined) return uri;
-      }
-      return undefined;
-    };
-    let ownDir: string | undefined;
-    try {
-      ownDir = path.dirname(URI.parse(fromUri).fsPath);
-    } catch {
-      ownDir = undefined;
-    }
-    if (ownDir) {
-      const hit = tryDir(ownDir);
+    const own = this.ownDirOf(fromUri);
+    if (own) {
+      const hit = this.tryDir(own, name);
       if (hit) return hit;
     }
     for (const d of this.subroutineDirs()) {
-      const hit = tryDir(d);
+      const hit = this.tryDir(d, name);
       if (hit) return hit;
     }
-    const ws = this.ngcByBasename.get(lower);
+    const ws = this.ngcByBasename.get(name.toLowerCase());
     return ws && ws.length ? ws[0] : undefined;
+  }
+
+  /** Resolve a named subroutine using ONLY a single config's ordered search dirs
+   *  (the caller's own directory first, then the given dirs in interpreter order:
+   *  PROGRAM_PREFIX before SUBROUTINES). There is no global union and no
+   *  basename fallback, so a call cannot bleed into another machine's subroutine.
+   *  Mirrors the interpreter's find_ngc_file (rs274ngc_pre.cc): per running INI,
+   *  flat directory search, first occurrence wins. */
+  resolveSubroutineScoped(fromUri: string, name: string, searchDirs: string[]): string | undefined {
+    const own = this.ownDirOf(fromUri);
+    if (own) {
+      const hit = this.tryDir(own, name);
+      if (hit) return hit;
+    }
+    for (const d of searchDirs) {
+      const hit = this.tryDir(d, name);
+      if (hit) return hit;
+    }
+    return undefined;
+  }
+
+  /** Look for `<name>.ngc` (and a lowercased variant) in a single directory,
+   *  returning the CANONICAL URI of the file that actually exists (symlink
+   *  dereferenced, true on-disk casing) so it matches the workspace index and
+   *  go-to-definition does not open a phantom differently-cased document.
+   *
+   *  A subroutine name may not contain a path separator: `o<../../other/sub>`
+   *  would otherwise let path.join escape the config's declared search dirs and
+   *  resolve into a different machine. Such names never resolve. */
+  private tryDir(dir: string, name: string): string | undefined {
+    if (name.includes('/') || name.includes('\\')) return undefined;
+    const lower = name.toLowerCase();
+    for (const fname of name === lower ? [name + '.ngc'] : [name + '.ngc', lower + '.ngc']) {
+      const fsPath = path.join(dir, fname);
+      if (this.readText(URI.file(fsPath).toString()) !== undefined) {
+        return URI.file(canonFile(fsPath)).toString();
+      }
+    }
+    return undefined;
+  }
+
+  private ownDirOf(fromUri: string): string | undefined {
+    try {
+      return path.dirname(URI.parse(fromUri).fsPath);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Read a file's text (open document, else from disk). Exposed for the server's
@@ -146,6 +215,22 @@ export class Project {
     }
   }
 
+  /** Drop an INI from the index (file deleted on disk). */
+  removeIni(iniUri: string): void {
+    const old = this.iniToHal.get(iniUri);
+    if (old) {
+      for (const h of old) {
+        const set = this.halToInis.get(h.uri);
+        if (set) {
+          set.delete(iniUri);
+          if (!set.size) this.halToInis.delete(h.uri);
+        }
+      }
+    }
+    this.iniToHal.delete(iniUri);
+    this.iniToSubDirs.delete(iniUri);
+  }
+
   /** INIs that include the given HAL file (may be empty for orphan files). */
   machinesForHal(halUri: string): string[] {
     return [...(this.halToInis.get(halUri) ?? [])];
@@ -153,6 +238,76 @@ export class Project {
 
   allIniUris(): string[] {
     return [...this.iniToHal.keys()];
+  }
+
+  /** The single INI's resolved subroutine search dirs, in interpreter order
+   *  (PROGRAM_PREFIX, then each SUBROUTINES entry), absolute. */
+  subDirsForIni(iniUri: string): string[] {
+    return this.iniToSubDirs.get(iniUri) ?? [];
+  }
+
+  /** The indexed INI(s) whose own directory most tightly encloses `ngcUri` (the
+   *  deepest ancestor directory). Several INIs sharing that directory are all
+   *  returned. Empty when no indexed INI is an ancestor — callers then fall back
+   *  to global (workspace-wide) behavior. */
+  iniOwnersForNgc(ngcUri: string): string[] {
+    const ngcDir = this.canonDirOf(ngcUri);
+    if (ngcDir === undefined) return [];
+    let best = -1;
+    let owners: string[] = [];
+    for (const iniUri of this.iniToHal.keys()) {
+      const iniDir = this.canonDirOf(iniUri);
+      if (iniDir === undefined || !isUnder(ngcDir, iniDir)) continue;
+      if (iniDir.length > best) {
+        best = iniDir.length;
+        owners = [iniUri];
+      } else if (iniDir.length === best) {
+        owners.push(iniUri);
+      }
+    }
+    return owners;
+  }
+
+  /** Compute the subroutine-resolution scope for a G-code file: the owning config
+   *  (honoring the active-machine pin when several configs enclose the file), that
+   *  config's ordered search dirs, and the roots that bound find-references. When
+   *  no config owns the file, `ownerIni` is undefined and callers fall back to the
+   *  global resolver / whole-workspace reference scan. */
+  subroutineScope(
+    ngcUri: string,
+    activeIni?: string,
+  ): { ownerIni?: string; searchDirs: string[]; universeRoots: string[] } {
+    const owners = this.iniOwnersForNgc(ngcUri);
+    const ownerIni = pickMachine(owners, activeIni);
+    if (!ownerIni) return { searchDirs: [], universeRoots: [] };
+    const searchDirs = this.subDirsForIni(ownerIni);
+    const iniDir = this.iniDirOf(ownerIni);
+    const universeRoots = iniDir ? [iniDir, ...searchDirs] : [...searchDirs];
+    return { ownerIni, searchDirs, universeRoots };
+  }
+
+  /** Workspace .ngc URIs whose directory lies within one of `roots` (a config's
+   *  own dir and its declared subroutine dirs). The scoped universe for
+   *  find-references; empty roots -> empty (caller falls back to the workspace). */
+  ngcUrisUnderRoots(roots: string[]): string[] {
+    if (!roots.length) return [];
+    const canonRoots = roots.map(canonPath);
+    const out: string[] = [];
+    for (const uri of this.workspaceNgcUris()) {
+      const dir = this.canonDirOf(uri);
+      if (dir !== undefined && canonRoots.some((r) => isUnder(dir, r))) out.push(uri);
+    }
+    return out;
+  }
+
+  private iniDirOf(iniUri: string): string | undefined {
+    return this.ownDirOf(iniUri);
+  }
+
+  /** The canonical (realpath) directory containing a file URI. */
+  private canonDirOf(uri: string): string | undefined {
+    const d = this.ownDirOf(uri);
+    return d === undefined ? undefined : canonPath(d);
   }
 
   /** Build a machine model for an INI, parsing all member HAL files. */
@@ -216,16 +371,21 @@ export class Project {
       const t = v.trim();
       if (t) dirs.push(path.isAbsolute(t) ? t : path.join(iniDir, t));
     };
+    // Order mirrors the interpreter's find_ngc_file (rs274ngc_pre.cc): a named
+    // subroutine is searched for in [DISPLAY]PROGRAM_PREFIX *first*, then the
+    // [RS274NGC]SUBROUTINES list, first occurrence wins. (USER_M_PATH is
+    // deliberately excluded: it is searched only for user M-codes, not o-word
+    // subroutine .ngc files.)
+    const disp = findSection(ini, 'DISPLAY');
+    if (disp) {
+      for (const e of findEntries(disp, 'PROGRAM_PREFIX')) if (e.value) add(e.value.text);
+    }
     const rs = findSection(ini, 'RS274NGC');
     if (rs) {
       // SUBROUTINES is a colon-separated list of directories.
       for (const e of findEntries(rs, 'SUBROUTINES')) {
         if (e.value) for (const part of e.value.text.split(':')) add(part);
       }
-    }
-    const disp = findSection(ini, 'DISPLAY');
-    if (disp) {
-      for (const e of findEntries(disp, 'PROGRAM_PREFIX')) if (e.value) add(e.value.text);
     }
     this.iniToSubDirs.set(iniUri, dirs);
   }
@@ -283,10 +443,75 @@ export function pickMachine(machines: string[], activeUri?: string): string | un
   return machines[0];
 }
 
+/** Canonicalize a filesystem path: dereference symlinks and, on case-insensitive
+ *  case-preserving filesystems (macOS, Windows), recover the true on-disk casing.
+ *  This mirrors the interpreter, which realpaths its search dirs, and keeps the
+ *  resolver and the workspace index in agreement. Falls back to a normalized path
+ *  when the target does not exist (e.g. an open, never-saved document). */
+function canonPath(p: string): string {
+  try {
+    // `.native` calls the OS realpath, which (unlike the JS implementation) also
+    // recovers the true on-disk casing on case-insensitive volumes — so a call to
+    // o<Probe> against an on-disk probe.ngc yields the same URI the index stored.
+    return fs.realpathSync.native(p);
+  } catch {
+    return path.resolve(p);
+  }
+}
+
+/** Canonicalize a FILE path: fully canonicalize the directory (dereference dir
+ *  symlinks + recover true casing) but DO NOT dereference a final-component
+ *  symlink. A subroutine .ngc that is itself a symlink stays at the in-scope
+ *  location where the search found it, rather than jumping to its target dir
+ *  (which may be outside the config) — keeping go-to-definition and
+ *  find-references in agreement. The directory is still canonicalized so a
+ *  symlinked search *dir* and the resolver agree (and casing is fixed). */
+function canonFile(fsPath: string): string {
+  const dir = path.dirname(fsPath);
+  const base = path.basename(fsPath);
+  let realDir: string;
+  try {
+    realDir = fs.realpathSync.native(dir);
+  } catch {
+    return path.resolve(fsPath);
+  }
+  try {
+    const entries = fs.readdirSync(realDir);
+    const cased = entries.includes(base) ? base : entries.find((e) => e.toLowerCase() === base.toLowerCase());
+    return path.join(realDir, cased ?? base);
+  } catch {
+    return path.join(realDir, base);
+  }
+}
+
+/** Canonicalize a file URI via {@link canonFile} (returns the input unchanged if
+ *  it is not a parseable file URI). */
+function canonicalizeUri(uri: string): string {
+  try {
+    return URI.file(canonFile(URI.parse(uri).fsPath)).toString();
+  } catch {
+    return uri;
+  }
+}
+
+/** True when `child` is `parent` itself or a path nested beneath it. Avoids the
+ *  `/a/b` vs `/a/bc` prefix-match trap by going through path.relative. */
+function isUnder(child: string, parent: string): boolean {
+  if (child === parent) return true;
+  const rel = path.relative(parent, child);
+  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 function findFilesByExt(root: string, ext: string, maxDepth = 5): string[] {
   const out: string[] = [];
+  // Track canonical dirs already walked so a symlinked subroutine tree (common in
+  // LinuxCNC configs) is indexed exactly once and symlink cycles cannot loop.
+  const visited = new Set<string>();
   const walk = (dir: string, depth: number): void => {
     if (depth > maxDepth) return;
+    const real = canonPath(dir);
+    if (visited.has(real)) return;
+    visited.add(real);
     let entries: fs.Dirent[];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -296,7 +521,17 @@ function findFilesByExt(root: string, ext: string, maxDepth = 5): string[] {
     for (const e of entries) {
       if (e.name.startsWith('.') || e.name === 'node_modules') continue;
       const p = path.join(dir, e.name);
-      if (e.isDirectory()) walk(p, depth + 1);
+      // Follow symlinked directories (resolve via stat), not just real dirs, so a
+      // SUBROUTINES dir that is a symlink still gets its .ngc files indexed.
+      let isDir = e.isDirectory();
+      if (e.isSymbolicLink()) {
+        try {
+          isDir = fs.statSync(p).isDirectory();
+        } catch {
+          isDir = false;
+        }
+      }
+      if (isDir) walk(p, depth + 1);
       else if (e.name.endsWith(ext)) out.push(p);
     }
   };

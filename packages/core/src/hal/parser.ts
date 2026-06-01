@@ -217,7 +217,7 @@ function parseLink(
   rest: HalToken[],
   base: Pick<BaseStatement, 'start' | 'end' | 'comment'>,
 ): HalStatement {
-  let firstToken: HalToken | undefined = rest[0];
+  const firstToken: HalToken | undefined = rest[0];
   let arrow: '<=' | '=>' | '<=>' | undefined;
   let secondToken: HalToken | undefined;
   if (rest[1]?.kind === HalTokenKind.Arrow) {

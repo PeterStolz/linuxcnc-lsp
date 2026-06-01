@@ -1,0 +1,4 @@
+(machine A probe: gentle touch-off)
+o<probe> sub
+G38.2 Z-5 F50
+o<probe> endsub

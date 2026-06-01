@@ -11,7 +11,8 @@ let index: MetadataIndex;
 let dir: string;
 beforeAll(() => {
   index = loadDBFromFile(DB);
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lcnc-proj-'));
+  // realpath so expected URIs match the server's canonical URIs (macOS /var symlink).
+  dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lcnc-proj-')));
 });
 afterAll(() => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* noop */ } });
 

@@ -6,7 +6,8 @@ import { URI } from 'vscode-uri';
 import { Project } from '../src/project';
 
 let root: string;
-beforeAll(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'lcnc-ngc-')); });
+// realpath so expected URIs match the server's canonical URIs (macOS /var symlink).
+beforeAll(() => { root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lcnc-ngc-'))); });
 afterAll(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* noop */ } });
 
 function write(rel: string, content: string): string {
