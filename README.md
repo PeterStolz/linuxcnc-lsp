@@ -4,7 +4,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=PeterStolz.linuxcnc-lsp"><img alt="VS Marketplace version" src="https://vsmarketplacebadges.dev/version-short/PeterStolz.linuxcnc-lsp.svg?label=VS%20Marketplace&color=0066b8&logo=visualstudiocode"></a>
   <a href="https://open-vsx.org/extension/PeterStolz/linuxcnc-lsp"><img alt="Open VSX version" src="https://img.shields.io/open-vsx/v/PeterStolz/linuxcnc-lsp?label=Open%20VSX&logo=eclipseide&color=c160ef"></a>
   <a href="https://github.com/PeterStolz/linuxcnc-lsp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/PeterStolz/linuxcnc-lsp/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/PeterStolz/linuxcnc-lsp/actions/workflows/ci.yml"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/.github/badges/coverage.json"></a>
+  <a href="https://codecov.io/gh/PeterStolz/linuxcnc-lsp"><img alt="Coverage" src="https://codecov.io/gh/PeterStolz/linuxcnc-lsp/branch/main/graph/badge.svg"></a>
   <a href="LICENSE"><img alt="License: GPL-2.0-or-later" src="https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg"></a>
 </p>
 

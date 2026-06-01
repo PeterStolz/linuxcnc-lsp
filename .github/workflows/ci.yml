@@ -38,17 +38,15 @@ jobs:
       - run: pnpm run test:coverage
       - run: pnpm run build
 
-      # CI is a gate, not a committer: regenerate the coverage badge and fail if
-      # the committed copy is out of date, so the author refreshes it in their PR
-      # (`pnpm run coverage:badge`). No bot commits to the repo.
-      - name: Check coverage badge is up to date
-        run: |
-          pnpm run coverage:badge
-          if ! git diff --quiet .github/badges/coverage.json; then
-            echo "::error::Coverage badge is stale. Run 'pnpm run coverage:badge' and commit .github/badges/coverage.json."
-            git --no-pager diff .github/badges/coverage.json
-            exit 1
-          fi
+      # Upload coverage to Codecov, which serves the README badge and PR comments.
+      # No file is committed to the repo. Public repos don't require a token, but
+      # one is recommended for reliability; set CODECOV_TOKEN in repo secrets.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   e2e:
     name: VSCode integration tests
