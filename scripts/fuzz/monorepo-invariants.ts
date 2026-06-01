@@ -137,9 +137,10 @@ export function checkWorkspace(root: string, maxDepth = 8): {
         });
       }
 
-      // INV3: the find-references universe must be bounded by the config roots, and
+      // INV3: the find-references universe (the product method, which also excludes
+      // files a tighter nested config owns) must be bounded by the config roots and
       // must include the resolved definition (else references would miss it).
-      const universe = project.ngcUrisUnderRoots(scope.universeRoots);
+      const universe = project.referencesUniverse(callerUri);
       const rootCanons = scope.universeRoots.map(canonPath).filter((d): d is string => !!d);
       for (const u of universe) {
         let up: string;

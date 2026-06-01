@@ -120,6 +120,53 @@ describe('S16: centralized Project.resolveSubroutine / referencesUniverse', () =
   });
 });
 
+describe('stress-run fixes', () => {
+  it('referencesUniverse excludes a NESTED config\'s files (no rename/refs bleed across machines)', () => {
+    // outer config owns machineN/ (PROGRAM_PREFIX=. -> its own dir is a root);
+    // a nested inner config owns machineN/inner/.
+    write('machineN/outer.ini', '[DISPLAY]\nPROGRAM_PREFIX = .\n');
+    write('machineN/prog.ngc', 'o<foo> call\n');
+    write('machineN/foo.ngc', SUB('foo'));
+    write('machineN/inner/inner.ini', '[RS274NGC]\nSUBROUTINES = subs\n');
+    write('machineN/inner/subs/foo.ngc', SUB('foo'));
+    write('machineN/inner/innerprog.ngc', 'o<foo> call\n');
+    const project = newProject();
+    project.scanRoots([root]);
+    const uni = project.referencesUniverse(uriOf('machineN/prog.ngc'));
+    // The outer machine's universe must NOT reach into the inner machine's files...
+    expect(uni.some((u) => u.replace(/\\/g, '/').includes('/inner/'))).toBe(false);
+    // ...but still includes the outer machine's own subroutine.
+    expect(uni.some((u) => u.replace(/\\/g, '/').endsWith('machineN/foo.ngc'))).toBe(true);
+    // The inner machine resolves its own foo independently.
+    expect(project.resolveSubroutine(uriOf('machineN/inner/innerprog.ngc'), 'foo'))
+      .toBe(uriOf('machineN/inner/subs/foo.ngc'));
+  });
+
+  it('a case-only rename of a sub leaves no wrong-cased ghost in the index', () => {
+    const stored = write('subs/Probe.ngc', SUB('probe')); // on-disk casing 'Probe'
+    const project = newProject();
+    project.indexNgc(stored);
+    expect(project.workspaceNgcUris().length).toBe(1);
+    // Rename Probe.ngc -> probe.ngc on disk, then the watcher's delete+create pair.
+    fs.rmSync(abs('subs/Probe.ngc'), { force: true });
+    fs.writeFileSync(abs('subs/probe.ngc'), SUB('probe'));
+    project.removeNgc(uriOf('subs/Probe.ngc'));
+    project.indexNgc(uriOf('subs/probe.ngc'));
+    const uris = project.workspaceNgcUris();
+    expect(uris.length).toBe(1); // exactly one entry, no 'Probe.ngc' phantom
+    expect(baseOf(uris[0])).toBe('probe.ngc'); // true on-disk casing
+  });
+
+  it('the global (no-config) resolver is order-independent for same-basename subs', () => {
+    write('libA/probe.ngc', SUB('probe'));
+    write('libB/probe.ngc', SUB('probe'));
+    const caller = uriOf('loose/job.ngc'); // owned by no INI -> global resolver
+    const a = newProject(); a.indexNgc(uriOf('libA/probe.ngc')); a.indexNgc(uriOf('libB/probe.ngc'));
+    const b = newProject(); b.indexNgc(uriOf('libB/probe.ngc')); b.indexNgc(uriOf('libA/probe.ngc'));
+    expect(a.resolveSubroutine(caller, 'probe')).toBe(b.resolveSubroutine(caller, 'probe'));
+  });
+});
+
 describe('S17: scan depth default is unified', () => {
   it('a default-constructed Project scans to DEFAULT_SCAN_DEPTH (8), not the old 5', () => {
     expect(DEFAULT_SCAN_DEPTH).toBe(8);

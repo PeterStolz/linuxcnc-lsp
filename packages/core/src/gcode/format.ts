@@ -30,8 +30,10 @@ export function formatGcode(
   const edits: TextEdit[] = [];
   const lineStarts = buildLineStarts(lineIndex);
 
+  const text = lineIndex.text;
   for (let line = 0; line < lineIndex.lineCount; line++) {
     const raw = lineIndex.lineText(line); // excludes the trailing newline
+    const start = lineStarts[line];
     // Split the line into leading whitespace | content | trailing whitespace.
     // `raw` is newline-free (LineIndex strips it), so [ \t] captures all of it.
     const contentStart = raw.length - raw.replace(/^[ \t]+/, '').length;
@@ -40,16 +42,18 @@ export function formatGcode(
 
     let desired: string;
     if (content === '') {
-      // Whitespace-only (or empty) line: no token to indent. Leave it exactly as
-      // written unless trailing-whitespace trimming was explicitly requested.
-      desired = trimTrailing ? '' : raw;
+      // Whitespace-only (or empty) line: no token to indent. Trim to empty only if
+      // asked AND it won't fuse line breaks: if this line sits between a bare CR
+      // (the previous line's terminator) and its own LF, deleting its whitespace
+      // joins them into one CRLF and silently drops a line — so leave it untouched.
+      const fusesBreaks = text.charCodeAt(start - 1) === 13 && text.charCodeAt(start + raw.length) === 10;
+      desired = trimTrailing && !fusesBreaks ? '' : raw;
     } else {
       const indent = unit.repeat(program.lineDepth[line] ?? 0);
       const trailing = trimTrailing ? '' : raw.slice(contentEnd);
       desired = indent + content + trailing;
     }
     if (desired === raw) continue;
-    const start = lineStarts[line];
     edits.push(TextEdit.replace(lineIndex.rangeAt(start, start + raw.length), desired));
   }
   return edits;

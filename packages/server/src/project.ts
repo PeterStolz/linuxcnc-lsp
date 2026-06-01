@@ -95,7 +95,7 @@ export class Project {
     const list = this.ngcByBasename.get(base);
     if (!list) return;
     const canon = canonicalizeUri(ngcUri);
-    const kept = list.filter((u) => u !== canon && fileExistsOnDisk(u));
+    const kept = list.filter((u) => u !== canon && fileExistsCased(u));
     if (kept.length) this.ngcByBasename.set(base, kept);
     else this.ngcByBasename.delete(base);
   }
@@ -124,11 +124,13 @@ export class Project {
     return out;
   }
 
-  /** The union of subroutine search-path dirs across all indexed INIs. */
+  /** The union of subroutine search-path dirs across all indexed INIs, sorted so
+   *  the global (no-config) resolver is order-independent — its result can't flip
+   *  on INI-insertion / scan order. */
   subroutineDirs(): string[] {
     const set = new Set<string>();
     for (const dirs of this.iniToSubDirs.values()) for (const d of dirs) set.add(d);
-    return [...set];
+    return [...set].sort();
   }
 
   /** Resolve a named subroutine to the .ngc file that defines it, searching the
@@ -150,7 +152,9 @@ export class Project {
       if (hit) return hit;
     }
     const ws = this.ngcByBasename.get(name.toLowerCase());
-    return ws && ws.length ? ws[0] : undefined;
+    // Sort so a same-basename collision resolves deterministically (not by
+    // index-insertion order), matching the tie-break in iniOwnersForNgc.
+    return ws && ws.length ? [...ws].sort()[0] : undefined;
   }
 
   /** Resolve a named subroutine using ONLY a single config's ordered search dirs.
@@ -196,11 +200,23 @@ export class Project {
       : this.resolveSubroutineFile(fromUri, name);
   }
 
-  /** The find-references universe for `fromUri`: the .ngc under the owning config's
-   *  roots when a config owns it, else the whole workspace. */
+  /** The find-references / rename universe for `fromUri`: the .ngc under the owning
+   *  config's roots when a config owns it, else the whole workspace.
+   *
+   *  A file under this config's roots may actually belong to a TIGHTER config (a
+   *  nested sub-config, or another INI sharing the dir): its own dir is enclosed by
+   *  this config's, but a deeper INI owns it. find-references and rename MUST NOT
+   *  reach into another machine's subroutines, so such files are excluded — only
+   *  files this same config owns (plus files owned by no config, e.g. a shared
+   *  library on the search path) stay. Without this, renaming an o-word could
+   *  silently rewrite a different machine's .ngc files. */
   referencesUniverse(fromUri: string, activeIni?: string): string[] {
     const scope = this.subroutineScope(fromUri, activeIni);
-    return scope.ownerIni ? this.ngcUrisUnderRoots(scope.universeRoots) : this.workspaceNgcUris();
+    if (!scope.ownerIni) return this.workspaceNgcUris();
+    return this.ngcUrisUnderRoots(scope.universeRoots).filter((u) => {
+      const owners = this.iniOwnersForNgc(u);
+      return owners.length === 0 || pickMachine(owners, activeIni) === scope.ownerIni;
+    });
   }
 
   /** Look for `<name>.ngc` (and a lowercased variant) in a single directory,
@@ -295,7 +311,7 @@ export class Project {
     const base = this.iniBaseName(iniUri);
     if (base === undefined) return;
     for (const key of [...this.iniToHal.keys()]) {
-      if (this.iniBaseName(key) === base && !fileExistsOnDisk(key)) this.dropIni(key);
+      if (this.iniBaseName(key) === base && !fileExistsCased(key)) this.dropIni(key);
     }
   }
 
@@ -537,11 +553,17 @@ export function pickMachine(machines: string[], activeUri?: string): string | un
   return machines[0];
 }
 
-/** True when the file behind a URI still exists on disk (used to prune the index
- *  on delete events whose path can no longer be canonicalized). */
-function fileExistsOnDisk(uri: string): boolean {
+/** True when a file with the EXACT casing of `uri`'s basename currently exists in
+ *  its directory. Used to prune the index on delete events. Unlike fs.existsSync
+ *  (case-insensitive on macOS/Windows, so it reports a stale `Probe.ngc` as still
+ *  present after a rename to `probe.ngc`), this reads the directory and checks for
+ *  the exact name — so a case-only rename correctly prunes the old-cased entry
+ *  instead of leaving a wrong-cased ghost in the index. A missing directory
+ *  (readdir throws) reads as "gone", matching the deleted-file intent. */
+function fileExistsCased(uri: string): boolean {
   try {
-    return fs.existsSync(URI.parse(uri).fsPath);
+    const fsPath = URI.parse(uri).fsPath;
+    return fs.readdirSync(path.dirname(fsPath)).includes(path.basename(fsPath));
   } catch {
     return false;
   }
