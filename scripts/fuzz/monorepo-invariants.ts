@@ -14,6 +14,9 @@ import * as path from 'path';
 import { URI } from 'vscode-uri';
 import { parseGcode } from '@linuxcnc/core';
 import { Project } from '../../packages/server/src/project';
+// Reuse the SERVER's canonicalization + containment helpers so the invariant
+// checker can never drift from the resolver it is verifying.
+import { canonPath, isUnder } from '../../packages/server/src/paths';
 
 export interface Violation {
   inv: string;
@@ -23,24 +26,6 @@ export interface Violation {
 }
 
 const GCODE_EXTS = ['.ngc', '.nc', '.tap', '.gcode'];
-
-/** Canonicalize a path for comparison the same way the server does: the OS
- *  realpath (`.native`) dereferences symlinks AND recovers true on-disk casing on
- *  case-insensitive volumes. Falls back to a normalized path when absent. */
-function canon(p: string): string | undefined {
-  try {
-    return fs.existsSync(p) ? fs.realpathSync.native(p) : path.resolve(p);
-  } catch {
-    return undefined;
-  }
-}
-
-/** True when `child` is `parent` or nested beneath it (handles parent === '/'). */
-function isUnder(child: string, parent: string): boolean {
-  if (child === parent) return true;
-  const rel = path.relative(parent, child);
-  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
-}
 
 /** Is `<name>.ngc` (or its lowercased form) a readable file in `dir`? Mirrors
  *  Project.tryDir's readText semantics (a file that cannot be read does not
@@ -83,12 +68,8 @@ export function checkWorkspace(root: string, maxDepth = 8): {
   let namedCalls = 0;
   let ownedCalls = 0;
 
-  const resolveIn = (proj: Project, callerUri: string, name: string): string | undefined => {
-    const scope = proj.subroutineScope(callerUri);
-    return scope.ownerIni
-      ? proj.resolveSubroutineScoped(callerUri, name, scope.searchDirs)
-      : proj.resolveSubroutineFile(callerUri, name);
-  };
+  const resolveIn = (proj: Project, callerUri: string, name: string): string | undefined =>
+    proj.resolveSubroutine(callerUri, name);
 
   for (const callerUri of callers) {
     let callerPath: string;
@@ -114,14 +95,12 @@ export function checkWorkspace(root: string, maxDepth = 8): {
     for (const name of names) {
       namedCalls++;
       const scope = project.subroutineScope(callerUri);
-      const scoped = scope.ownerIni
-        ? project.resolveSubroutineScoped(callerUri, name, scope.searchDirs)
-        : project.resolveSubroutineFile(callerUri, name);
+      const scoped = project.resolveInScope(callerUri, name, scope);
 
       if (!scope.ownerIni) continue; // loose file -> global fallback, not scoped
       ownedCalls++;
 
-      const allowedDirs = [ownDir, ...scope.searchDirs].map(canon).filter((d): d is string => !!d);
+      const allowedDirs = [ownDir, ...scope.searchDirs].map(canonPath).filter((d): d is string => !!d);
 
       // INV1: a scoped resolution must live in the caller's own dir or one of the
       // owning config's declared search dirs — never another config's private dir.
@@ -132,7 +111,7 @@ export function checkWorkspace(root: string, maxDepth = 8): {
         } catch {
           resPath = '';
         }
-        const resDir = canon(path.dirname(resPath));
+        const resDir = canonPath(path.dirname(resPath));
         if (!resDir || !allowedDirs.includes(resDir)) {
           violations.push({
             inv: 'INV1-bleed',
@@ -161,7 +140,7 @@ export function checkWorkspace(root: string, maxDepth = 8): {
       // INV3: the find-references universe must be bounded by the config roots, and
       // must include the resolved definition (else references would miss it).
       const universe = project.ngcUrisUnderRoots(scope.universeRoots);
-      const rootCanons = scope.universeRoots.map(canon).filter((d): d is string => !!d);
+      const rootCanons = scope.universeRoots.map(canonPath).filter((d): d is string => !!d);
       for (const u of universe) {
         let up: string;
         try {
@@ -169,7 +148,7 @@ export function checkWorkspace(root: string, maxDepth = 8): {
         } catch {
           continue;
         }
-        const uDir = canon(path.dirname(up));
+        const uDir = canonPath(path.dirname(up));
         if (uDir && !rootCanons.some((r) => isUnder(uDir, r))) {
           violations.push({
             inv: 'INV3-universe-unbounded',

@@ -9,6 +9,8 @@ import {
   SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS, SeverityName,
   LineIndex, parseGcode,
   gcodeOwordAt, gcodeDefinition, gcodeReferences, gcodeDocumentHighlights,
+  gcodeRenameTarget, owordNameRange, isValidOwordName, gcodeRenameRangesInFile,
+  gcodeReferenceRangesInFile,
   diagnoseGcodeUnresolvedCalls,
 } from '@linuxcnc/core';
 import {
@@ -19,11 +21,12 @@ import {
 } from '@linuxcnc/metadata';
 import {
   buildDocModel, buildDocModelFromText, computeDiagnostics, computeSemanticTokens,
-  computeDocumentSymbols, computeFoldingRanges, computeFormat, DocModel,
+  computeDocumentSymbols, computeFoldingRanges, computeFormat, DocModel, docKind,
 } from './analysis';
-import { Location, DocumentHighlight } from 'vscode-languageserver/node';
+import { Location, DocumentHighlight, TextEdit, Range, WorkspaceEdit } from 'vscode-languageserver/node';
 import { loadMetadata, scanWorkspaceComps } from './metadata';
 import { Project, resolveActiveMachine, pickMachine } from './project';
+import { isGcodePath } from './gcodeFiles';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -220,10 +223,6 @@ function publishUri(uri: string, crossByUri?: Map<string, Diagnostic[]>): void {
   publish(uri, [...intra, ...cross]);
 }
 
-function isGcodeUri(lower: string): boolean {
-  return lower.endsWith('.ngc') || lower.endsWith('.nc') || lower.endsWith('.gcode') || lower.endsWith('.tap');
-}
-
 /** The subroutine-resolution scope for a G-code file: the config that owns it
  *  (honoring the active-machine pin when several configs enclose the file), its
  *  ordered search dirs, and the roots bounding find-references. */
@@ -237,9 +236,7 @@ function gcodeScope(uri: string): ReturnType<Project['subroutineScope']> {
  *  identically-named subroutine), else the global workspace resolver for loose
  *  files that belong to no indexed config. */
 function resolveSubFor(uri: string, name: string, scope = gcodeScope(uri)): string | undefined {
-  return scope.ownerIni
-    ? project.resolveSubroutineScoped(uri, name, scope.searchDirs)
-    : project.resolveSubroutineFile(uri, name);
+  return project.resolveInScope(uri, name, scope);
 }
 
 /** Cross-file G-code diagnostics: `call`s to subroutines that resolve neither
@@ -290,8 +287,11 @@ function gcodeReferencesAt(uri: string, model: DocModel, offset: number, include
   const hit = gcodeOwordAt(model.gcode, offset);
   if (!hit?.key) return [];
   const out = gcodeReferences(model.gcode, model.lineIndex, uri, offset, includeDecl);
-  const scope = gcodeScope(uri);
-  const universe = scope.ownerIni ? project.ngcUrisUnderRoots(scope.universeRoots) : project.workspaceNgcUris();
+  // Numbered O-words (O100) are file-local; their key is just the number, so they
+  // must never extend cross-file (an O100 in any other in-scope file would match).
+  if (hit.form !== 'named') return out;
+  const active = resolveActiveMachine(settings.activeMachine, project.allIniUris());
+  const universe = project.referencesUniverse(uri, active);
   // The universe holds canonical URIs; the open-doc URI may not be, so compare
   // canonically to avoid listing the caller file twice.
   const selfCanon = project.canonicalUri(uri);
@@ -299,16 +299,34 @@ function gcodeReferencesAt(uri: string, model: DocModel, offset: number, include
     if (otherUri === uri || otherUri === selfCanon) continue;
     const text = project.readFileText(otherUri);
     if (text === undefined) continue;
-    const prog = parseGcode(text);
     const li = new LineIndex(text);
-    for (const st of prog.statements) {
-      if (st.oword.key !== hit.key) continue;
-      if (st.keyword !== 'call' && st.keyword !== 'sub' && st.keyword !== 'endsub') continue;
-      if (!includeDecl && st.keyword === 'sub') continue;
-      out.push({ uri: otherUri, range: li.rangeAt(st.oword.start, st.oword.end) });
+    for (const range of gcodeReferenceRangesInFile(parseGcode(text), li, hit.key, includeDecl)) {
+      out.push({ uri: otherUri, range });
     }
   }
   return out;
+}
+
+/** Rename a G-code o-word subroutine label: every named occurrence in this file
+ *  plus, across the owning config's scoped reference universe (the same files
+ *  find-references covers), every named occurrence sharing the label. */
+function gcodeRenameEdits(uri: string, model: DocModel, offset: number, newName: string): WorkspaceEdit | null {
+  if (!model.gcode) return null;
+  const target = gcodeRenameTarget(model.gcode, offset);
+  if (!target?.key || !isValidOwordName(newName)) return null;
+  const changes: Record<string, TextEdit[]> = {};
+  const add = (u: string, range: Range): void => { (changes[u] ??= []).push(TextEdit.replace(range, newName)); };
+  for (const r of gcodeRenameRangesInFile(model.gcode, model.lineIndex, target.key)) add(uri, r);
+  const active = resolveActiveMachine(settings.activeMachine, project.allIniUris());
+  const selfCanon = project.canonicalUri(uri);
+  for (const otherUri of project.referencesUniverse(uri, active)) {
+    if (otherUri === uri || otherUri === selfCanon) continue;
+    const text = project.readFileText(otherUri);
+    if (text === undefined) continue;
+    const li = new LineIndex(text);
+    for (const r of gcodeRenameRangesInFile(parseGcode(text), li, target.key)) add(otherUri, r);
+  }
+  return Object.keys(changes).length ? { changes } : null;
 }
 
 /** Top-level: a document changed; revalidate it and any machine siblings. */
@@ -336,10 +354,13 @@ function onDocChanged(uri: string): void {
     }
     return;
   }
-  if (isGcodeUri(lower)) {
+  // For an OPEN doc, trust its languageId (so a file the user mapped to the gcode
+  // language via files.associations is handled), else fall back to the extension.
+  const open = documents.get(uri);
+  const isGcode = open ? docKind(open) === 'gcode' : isGcodePath(lower);
+  if (isGcode) {
     project.indexNgc(uri); // keep the cross-file basename index current
     if (settings.diagnosticsEnabled === false) { publish(uri, []); return; }
-    const open = documents.get(uri);
     const model = open ? getModel(open) : tryBuildFromFs(uri);
     if (!model?.gcode) { publishUri(uri); return; }
     publish(uri, [...intraDiagnostics(uri), ...gcodeCrossDiagnostics(uri, model)]);
@@ -368,23 +389,33 @@ function flushWatched(): void {
   watchedTimer = undefined;
   const changes = pendingWatched.splice(0);
   let touched = false;
+  // This runs from a setTimeout: a throw here has no caller to catch it and would
+  // crash the whole language server. Index each change defensively and keep going.
   for (const c of changes) {
-    const lower = c.uri.toLowerCase();
-    if (lower.endsWith('.ini')) {
-      if (c.type === FileChangeType.Deleted) project.removeIni(c.uri);
-      else project.indexIni(c.uri);
-      touched = true;
-    } else if (isGcodeUri(lower)) {
-      if (c.type === FileChangeType.Deleted) project.removeNgc(c.uri);
-      else project.indexNgc(c.uri);
-      touched = true;
-    } else if (lower.endsWith('.hal')) {
-      // HAL membership is derived from INI [HAL] entries (read on demand), so the
-      // index itself does not change; just refresh consumers below.
-      touched = true;
+    try {
+      const lower = c.uri.toLowerCase();
+      if (lower.endsWith('.ini')) {
+        if (c.type === FileChangeType.Deleted) project.removeIni(c.uri);
+        else project.indexIni(c.uri);
+        touched = true;
+      } else if (isGcodePath(lower)) {
+        if (c.type === FileChangeType.Deleted) project.removeNgc(c.uri);
+        else project.indexNgc(c.uri);
+        touched = true;
+      } else if (lower.endsWith('.hal')) {
+        // HAL membership is derived from INI [HAL] entries (read on demand), so the
+        // index itself does not change; just refresh consumers below.
+        touched = true;
+      }
+    } catch {
+      /* skip a single bad change; never let it crash the flush */
     }
   }
-  if (touched) for (const doc of documents.all()) onDocChanged(doc.uri);
+  if (touched) {
+    for (const doc of documents.all()) {
+      try { onDocChanged(doc.uri); } catch { /* keep revalidating the rest */ }
+    }
+  }
 }
 
 connection.onDidChangeWatchedFiles((params) => {
@@ -499,6 +530,14 @@ function modelForUri(uri: string): MachineModel | undefined {
 connection.onPrepareRename((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
+  const dm = getModel(doc);
+  if (dm.kind === 'gcode') {
+    if (!dm.gcode) return null;
+    const target = gcodeRenameTarget(dm.gcode, doc.offsetAt(params.position));
+    if (!target) return null;
+    const range = owordNameRange(target, dm.lineIndex);
+    return range ? { range, placeholder: target.name ?? '' } : null;
+  }
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return prepareRename(model, doc.uri, doc.offsetAt(params.position));
@@ -507,6 +546,8 @@ connection.onPrepareRename((params) => {
 connection.onRenameRequest((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc) return null;
+  const dm = getModel(doc);
+  if (dm.kind === 'gcode') return gcodeRenameEdits(doc.uri, dm, doc.offsetAt(params.position), params.newName);
   const model = modelForUri(doc.uri);
   if (!model) return null;
   return rename(model, doc.uri, doc.offsetAt(params.position), params.newName);
