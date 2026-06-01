@@ -39,8 +39,8 @@ jobs:
       - run: pnpm run build
 
       # Upload coverage to Codecov, which serves the README badge and PR comments.
-      # No file is committed to the repo. Public repos don't require a token, but
-      # one is recommended for reliability; set CODECOV_TOKEN in repo secrets.
+      # No file is committed to the repo. Requires the CODECOV_TOKEN repo secret
+      # (this repo rejects tokenless uploads).
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
