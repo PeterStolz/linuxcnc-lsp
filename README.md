@@ -11,15 +11,15 @@ Language Server Protocol implementation and VSCode extension for editing
 
 ## Install
 
-- **VS Code / VSCodium:** search **“LinuxCNC — HAL, INI & G-code”** in the
+- **VS Code / VSCodium:** search for **“LinuxCNC: HAL, INI & G-code”** in the
   Extensions view, or install from the
   [**Visual Studio Marketplace**](https://marketplace.visualstudio.com/items?itemName=PeterStolz.linuxcnc-lsp)
-  / [**Open VSX**](https://open-vsx.org/extension/PeterStolz/linuxcnc-lsp).
-- Then **open the folder** with your machine config (`.ini` + its `.hal` files)
-  and start editing — see the
-  [user guide](packages/client/README.md#quick-start) for what you'll see.
+  or [**Open VSX**](https://open-vsx.org/extension/PeterStolz/linuxcnc-lsp).
+- Then **open the folder** with your machine config (the `.ini` and its `.hal`
+  files) and start editing. The
+  [user guide](packages/client/README.md#quick-start) covers what you'll see.
 
-Works fully offline — no LinuxCNC install required, on Windows, macOS, or Linux.
+Works fully offline, with no LinuxCNC install required, on Windows, macOS, or Linux.
 
 ## Features
 
@@ -30,19 +30,19 @@ Works fully offline — no LinuxCNC install required, on Windows, macOS, or Linu
 - Error when a HAL file references an INI constant `[SECTION]KEY` that is not
   present in the owning INI
 - Hover documentation for halcmd commands, component pins/params/functions,
-  INI keys and G/M-codes — sourced from the LinuxCNC source tree
+  INI keys and G/M-codes, sourced from the LinuxCNC source tree
 - Hover over a homing INI variable renders that section of the LinuxCNC docs
 - Hover over an INI key tells you whether it is referenced by any HAL file
 - Context-aware autocomplete, including Mesa hostmot2 card pins and `config=`
   string attributes
 - Custom workspace `.comp` components are parsed and contribute hover/completion
-- G-code O-word subroutines: go-to-definition / find-references (including
+- G-code O-word subroutines: go-to-definition and find-references (including
   cross-file `.ngc` resolution via the INI subroutine search path), document
   outline, folding, a block-indenting formatter, and structural diagnostics for
-  unmatched / unclosed / mismatched O-words
+  unmatched, unclosed, or mismatched O-words
 
-> **Using it** (not hacking on it)? Install **LinuxCNC — HAL, INI & G-code** from
-> the VS Code Marketplace or Open VSX, open the folder containing your `.ini` +
+> **Using it** (not hacking on it)? Install **LinuxCNC: HAL, INI & G-code** from
+> the VS Code Marketplace or Open VSX, open the folder containing your `.ini` and
 > `.hal` files, and edit. The user-facing guide (quick start, settings,
 > troubleshooting, diagnostics reference) lives in
 > [`packages/client/README.md`](packages/client/README.md).
@@ -58,7 +58,7 @@ Static analysis has edges worth knowing:
 - **Metadata is pinned** to one LinuxCNC version (see `metadata-source.json`);
   regenerate (`pnpm run gen:db`) and point `linuxcnc.metadata.path` at it for a
   very different version.
-- **No 3D backplot / toolpath preview** and **no machine-limit checks**.
+- **No 3D backplot or toolpath preview** and **no machine-limit checks**.
 - **G-code is LinuxCNC RS274NGC only**; expressions are parsed for structure, not
   evaluated.
 - A `.hal` **shared by multiple machines** uses the first one found unless pinned
@@ -83,7 +83,7 @@ Monorepo (npm workspaces):
 
 | Package | Purpose |
 |---|---|
-| `@linuxcnc/core` | tokenizer, parsers, AST, machine model, diagnostics, provider logic — **no vscode/LSP deps**, fully unit-tested |
+| `@linuxcnc/core` | tokenizer, parsers, AST, machine model, diagnostics, provider logic (**no vscode/LSP deps**, fully unit-tested) |
 | `@linuxcnc/metadata` | build-time extractors, bundled DB, runtime loader + workspace overlay, asciidoc→markdown |
 | `@linuxcnc/server` | `vscode-languageserver` wiring over `core` |
 | `client` | the VSCode extension; spawns the server, contributes grammars/config |
@@ -112,6 +112,6 @@ see [`LICENSE`](./LICENSE).
 This project bundles a metadata database (`packages/metadata/data/`) extracted
 from the **LinuxCNC** source tree and documentation (see `metadata-source.json`),
 which is itself licensed under the GNU GPL. Component, pin, INI and G-code
-descriptions are derived from LinuxCNC's man pages, `.comp` files and docs —
+descriptions are derived from LinuxCNC's man pages, `.comp` files and docs,
 © the LinuxCNC project and contributors. The GPL is used here to stay fully
 compatible with that upstream material.
