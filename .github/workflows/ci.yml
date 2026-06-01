@@ -26,8 +26,6 @@ jobs:
   unit:
     name: Typecheck, unit + golden corpus, build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -40,18 +38,16 @@ jobs:
       - run: pnpm run test:coverage
       - run: pnpm run build
 
-      # Refresh the coverage badge JSON on pushes to main and commit it back if
-      # the percentage changed. The README points a shields endpoint at this file.
-      - name: Update coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # CI is a gate, not a committer: regenerate the coverage badge and fail if
+      # the committed copy is out of date, so the author refreshes it in their PR
+      # (`pnpm run coverage:badge`). No bot commits to the repo.
+      - name: Check coverage badge is up to date
         run: |
           pnpm run coverage:badge
           if ! git diff --quiet .github/badges/coverage.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .github/badges/coverage.json
-            git commit -m "chore: update coverage badge [skip ci]"
-            git push
+            echo "::error::Coverage badge is stale. Run 'pnpm run coverage:badge' and commit .github/badges/coverage.json."
+            git --no-pager diff .github/badges/coverage.json
+            exit 1
           fi
 
   e2e:
