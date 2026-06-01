@@ -26,8 +26,6 @@ jobs:
   unit:
     name: Typecheck, unit + golden corpus, build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -40,19 +38,15 @@ jobs:
       - run: pnpm run test:coverage
       - run: pnpm run build
 
-      # Refresh the coverage badge JSON on pushes to main and commit it back if
-      # the percentage changed. The README points a shields endpoint at this file.
-      - name: Update coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          pnpm run coverage:badge
-          if ! git diff --quiet .github/badges/coverage.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .github/badges/coverage.json
-            git commit -m "chore: update coverage badge [skip ci]"
-            git push
-          fi
+      # Upload coverage to Codecov, which serves the README badge and PR comments.
+      # No file is committed to the repo. Requires the CODECOV_TOKEN repo secret
+      # (this repo rejects tokenless uploads).
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   e2e:
     name: VSCode integration tests

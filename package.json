@@ -15,7 +15,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "coverage:badge": "tsx scripts/coverage-badge.ts",
     "lint": "eslint .",
     "gen:db": "tsx scripts/regenerate-db.ts",
     "corpus": "tsx scripts/corpus-check.ts",

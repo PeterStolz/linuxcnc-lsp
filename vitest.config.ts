@@ -18,7 +18,8 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      reporter: ['text-summary', 'json-summary'],
+      // text-summary for humans in the CI log; lcov for the Codecov upload.
+      reporter: ['text-summary', 'lcov'],
       reportsDirectory: 'coverage',
       // Measure the runtime analysis engine: the code that actually executes when
       // the language server runs and is exercised by these unit tests. Build-time
