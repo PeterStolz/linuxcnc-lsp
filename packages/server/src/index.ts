@@ -378,6 +378,10 @@ connection.onDocumentFormatting((params) => {
   return computeFormat(model, {
     tabSize: params.options.tabSize,
     insertSpaces: params.options.insertSpaces,
+    // VS Code populates this from the standard `files.trimTrailingWhitespace`
+    // setting (document-scoped, so a `[gcode]` override applies); it is omitted
+    // when off, so absent === do not trim.
+    trimTrailingWhitespace: params.options.trimTrailingWhitespace ?? false,
   });
 });
 

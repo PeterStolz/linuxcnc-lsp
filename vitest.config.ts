@@ -21,6 +21,10 @@ export default defineConfig({
       // text-summary for humans in the CI log; lcov for the Codecov upload.
       reporter: ['text-summary', 'lcov'],
       reportsDirectory: 'coverage',
+      // Still write the report when tests fail, so CI can upload coverage on a
+      // red run (vitest skips it by default; the CI job trims red back on via a
+      // dedicated "fail if tests failed" step).
+      reportOnFailure: true,
       // Measure the runtime analysis engine: the code that actually executes when
       // the language server runs and is exercised by these unit tests. Build-time
       // code (the metadata extractors run by `gen:db`) and the LSP wiring

@@ -35,18 +35,33 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
-      - run: pnpm run test:coverage
+
+      # continue-on-error lets the coverage upload below run even on a red test
+      # run (vitest's reportOnFailure keeps writing coverage/lcov.info); the gate
+      # is restored by the "Fail if tests failed" step at the end.
+      - name: Test with coverage
+        id: tests
+        continue-on-error: true
+        run: pnpm run test:coverage
+
       - run: pnpm run build
 
       # Upload coverage to Codecov, which serves the README badge and PR comments.
       # No file is committed to the repo. Requires the CODECOV_TOKEN repo secret
-      # (this repo rejects tokenless uploads).
+      # (this repo rejects tokenless uploads). if: always() so a failing run still
+      # publishes its coverage rather than dropping the data point.
       - name: Upload coverage to Codecov
+        if: always()
         uses: codecov/codecov-action@v5
         with:
           files: coverage/lcov.info
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      # Restore the red the continue-on-error above deferred, so tests still gate.
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
 
   e2e:
     name: VSCode integration tests
@@ -61,7 +76,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - name: Run @vscode/test-electron under xvfb
-        run: xvfb-run -a pnpm --filter linuxcnc-lsp run --if-present test:e2e
-        # test:e2e is added in the P6 milestone; --if-present + continue-on-error
-        # keep this a no-op until then.
-        continue-on-error: true
+        # Launches a real VS Code, loads the extension, and drives Format Document
+        # through the live client↔server round trip under different settings
+        # (packages/client/test/suite/format.test.ts). A real gate now.
+        run: xvfb-run -a pnpm --filter linuxcnc-lsp run test:e2e

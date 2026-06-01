@@ -65,7 +65,12 @@ shared by several machines? See [Multiple machines](#multiple-machines-in-one-wo
   (`[RS274NGC]SUBROUTINES`, `[DISPLAY]PROGRAM_PREFIX`).
 - Document outline and folding for subroutine / control-flow blocks.
 - A **formatter** that indents `sub`/`if`/`while`/`do`/`repeat` blocks by nesting
-  depth (Format Document).
+  depth (Format Document). It only rewrites **leading indentation**; your trailing
+  spaces and blank lines are left exactly as they are, so formatting an
+  already-indented file changes nothing and never dirties your git history. Want
+  trailing whitespace cleaned up too? Enable VS Code's built-in
+  `files.trimTrailingWhitespace` (set `"files.trimTrailingWhitespace": true` in
+  `settings.json`, globally or under a `"[gcode]"` block).
 - Structural diagnostics: unmatched / unclosed / mismatched O-words, duplicate or
   nested subroutines, and misplaced `return`/`break`/`continue`.
 
