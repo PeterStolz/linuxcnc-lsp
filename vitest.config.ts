@@ -16,5 +16,24 @@ export default defineConfig({
     // packages/client and are driven by @vscode/test-electron, not vitest.
     include: ['packages/{core,metadata,server}/**/*.test.ts'],
     environment: 'node',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary'],
+      reportsDirectory: 'coverage',
+      // Measure the runtime analysis engine: the code that actually executes when
+      // the language server runs and is exercised by these unit tests. Build-time
+      // code (the metadata extractors run by `gen:db`) and the LSP wiring
+      // (server/src/index.ts + analysis.ts, covered by the @vscode/test-electron
+      // e2e suite rather than vitest) are excluded so the number reflects what the
+      // unit tests genuinely cover.
+      include: [
+        'packages/core/src/**',
+        'packages/metadata/src/model/**',
+        'packages/metadata/src/providers/**',
+        'packages/metadata/src/db.ts',
+        'packages/server/src/project.ts',
+      ],
+      exclude: ['**/*.d.ts', '**/index.ts'],
+    },
   },
 });
