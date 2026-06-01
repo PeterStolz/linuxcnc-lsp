@@ -39,10 +39,11 @@ Works fully offline, with no LinuxCNC install required, on Windows, macOS, or Li
 - Context-aware autocomplete, including Mesa hostmot2 card pins and `config=`
   string attributes
 - Custom workspace `.comp` components are parsed and contribute hover/completion
-- G-code O-word subroutines: go-to-definition and find-references (including
-  cross-file `.ngc` resolution via the INI subroutine search path), document
-  outline, folding, a block-indenting formatter, and structural diagnostics for
-  unmatched, unclosed, or mismatched O-words
+- G-code O-word subroutines: go-to-definition, find-references, and rename
+  (including cross-file `.ngc` resolution via the INI subroutine search path,
+  scoped per machine config), document outline, folding, a block-indenting
+  formatter, and structural diagnostics for unmatched, unclosed, or mismatched
+  O-words
 
 > **Using it** (not hacking on it)? Install **LinuxCNC: HAL, INI & G-code** from
 > the VS Code Marketplace or Open VSX, open the folder containing your `.ini` and

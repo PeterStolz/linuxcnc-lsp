@@ -121,9 +121,22 @@ describe('parseGcode — structural problems', () => {
     expect(parseGcode('o2 while [1]\no2 break\no2 endwhile\n').problems).toEqual([]);
   });
 
-  it('flags an O-word with no keyword', () => {
-    const p = parseGcode('o100\n');
+  it('flags a NAMED O-word with no keyword (incomplete statement)', () => {
+    const p = parseGcode('o<foo>\n');
     expect(p.problems.some((x) => x.code === 'gcode.oword.missingKeyword')).toBe(true);
+  });
+
+  it('does NOT flag a bare numbered O-word — it is a Fanuc/CAM program number, not a mistake', () => {
+    expect(parseGcode('o100\n').problems.some((x) => x.code === 'gcode.oword.missingKeyword')).toBe(false);
+    // The header line CAM posts actually emit: a program number + a comment.
+    expect(parseGcode('O1000 (FACE AND DRILL)\nG21 G90\nM2\n').problems
+      .some((x) => x.code === 'gcode.oword.missingKeyword')).toBe(false);
+  });
+
+  it('ignores spaces inside an o-word name (o< probe > == o<probe>)', () => {
+    const p = parseGcode('o< probe > sub\nG1 X1\no<probe> endsub\n');
+    expect(p.problems).toEqual([]); // labels share the key 'probe' -> block matches
+    expect(p.subs[0].key).toBe('probe');
   });
 
   it('does not flag a plain G-code program', () => {

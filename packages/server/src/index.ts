@@ -25,7 +25,7 @@ import {
 } from './analysis';
 import { Location, DocumentHighlight, TextEdit, Range, WorkspaceEdit } from 'vscode-languageserver/node';
 import { loadMetadata, scanWorkspaceComps } from './metadata';
-import { Project, resolveActiveMachine, pickMachine } from './project';
+import { Project, resolveActiveMachine, pickMachine, DEFAULT_SCAN_DEPTH } from './project';
 import { isGcodePath } from './gcodeFiles';
 
 const connection = createConnection(ProposedFeatures.all);
@@ -43,7 +43,6 @@ interface Settings {
   /** Max directory depth for the workspace scan (`linuxcnc.scan.maxDepth`). */
   scanMaxDepth?: number;
 }
-const DEFAULT_SCAN_DEPTH = 8;
 let settings: Settings = { diagnosticsEnabled: true, overrides: {} };
 
 let metadata: MetadataIndex | undefined;

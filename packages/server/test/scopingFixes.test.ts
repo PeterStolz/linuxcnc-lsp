@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { URI } from 'vscode-uri';
-import { Project } from '../src/project';
+import { Project, DEFAULT_SCAN_DEPTH } from '../src/project';
 import { GCODE_EXTENSIONS, isGcodePath } from '../src/gcodeFiles';
 
 let root: string;
@@ -117,6 +117,16 @@ describe('S16: centralized Project.resolveSubroutine / referencesUniverse', () =
     const project = newProject();
     project.scanRoots([root]);
     expect(project.resolveSubroutine(uriOf('loose/main.ngc'), 'probe')).toBe(uriOf('loose/probe.ngc'));
+  });
+});
+
+describe('S17: scan depth default is unified', () => {
+  it('a default-constructed Project scans to DEFAULT_SCAN_DEPTH (8), not the old 5', () => {
+    expect(DEFAULT_SCAN_DEPTH).toBe(8);
+    write('a/b/c/d/e/f/deep.ngc', SUB('deep')); // file at dir-depth 6 (> old 5)
+    const project = newProject();
+    project.scanRoots([root]);
+    expect(project.workspaceNgcUris().map(baseOf)).toContain('deep.ngc');
   });
 });
 

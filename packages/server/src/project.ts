@@ -15,6 +15,12 @@ interface ResolvedHal {
   opaque: boolean; // Tcl or unresolved LIB: file
 }
 
+/** Default max directory depth for the workspace scan. The single source of truth
+ *  — the server's `linuxcnc.scan.maxDepth` setting falls back to this, and the
+ *  constructor default matches it so a `new Project(...)` in a test indexes to the
+ *  same depth as production. Keep `packages/client/package.json` in sync. */
+export const DEFAULT_SCAN_DEPTH = 8;
+
 /** Tracks INI <-> HAL associations across the workspace and builds machine
  *  models on demand. Reads file contents via `getText` (open docs) falling
  *  back to the filesystem. */
@@ -27,13 +33,16 @@ export class Project {
   /** Workspace .ngc files indexed by lowercased basename (no extension) for
    *  file-based subroutine resolution fallback. */
   private ngcByBasename = new Map<string, string[]>();
+  /** Canonical (realpath'd) directory of each indexed INI, cached so the
+   *  per-keystroke ownership lookup doesn't realpath every INI on every call. */
+  private iniCanonDir = new Map<string, string>();
 
   constructor(
     private readonly getText: (uri: string) => string | undefined,
     private readonly libDir: () => string | undefined,
     /** Max directory depth for the workspace scan (configurable via
      *  `linuxcnc.scan.maxDepth`); deep monorepos need more than the default. */
-    private readonly maxDepth: () => number = () => 5,
+    private readonly maxDepth: () => number = () => DEFAULT_SCAN_DEPTH,
   ) {}
 
   /** Scan workspace roots for .ini and .ngc files and (re)build associations. */
@@ -42,6 +51,7 @@ export class Project {
     this.halToInis.clear();
     this.iniToSubDirs.clear();
     this.ngcByBasename.clear();
+    this.iniCanonDir.clear();
     const depth = this.maxDepth();
     for (const root of roots) {
       // One combined walk per root collecting .ini AND every G-code extension —
@@ -49,7 +59,10 @@ export class Project {
       // basename fallback silently miss them until the file is opened.
       const { inis, gcode } = scanProjectFiles(root, depth);
       for (const iniPath of inis) this.indexIni(URI.file(iniPath).toString());
-      for (const ngcPath of gcode) this.indexNgc(URI.file(ngcPath).toString());
+      // The walk already realpath'd each directory and used the true on-disk
+      // casing, so these paths are canonical — skip the per-file realpath+readdir
+      // (which is otherwise O(n^2) for a flat dir of thousands of subs).
+      for (const ngcPath of gcode) this.addCanonicalNgc(URI.file(ngcPath).toString());
     }
   }
 
@@ -57,7 +70,11 @@ export class Project {
    *  Stored canonical (symlink-dereferenced, true-cased) so it matches what the
    *  resolver returns. */
   indexNgc(ngcUri: string): void {
-    const uri = canonicalizeUri(ngcUri);
+    this.addCanonicalNgc(canonicalizeUri(ngcUri));
+  }
+
+  /** Add an ALREADY-CANONICAL .ngc URI to the basename index. */
+  private addCanonicalNgc(uri: string): void {
     const base = this.ngcBaseName(uri);
     if (!base) return;
     const list = this.ngcByBasename.get(base) ?? [];
@@ -199,11 +216,23 @@ export class Project {
     const lower = name.toLowerCase();
     for (const fname of name === lower ? [name + '.ngc'] : [name + '.ngc', lower + '.ngc']) {
       const fsPath = path.join(dir, fname);
-      if (this.readText(URI.file(fsPath).toString()) !== undefined) {
+      if (this.fileResolvable(fsPath)) {
         return URI.file(canonFile(fsPath)).toString();
       }
     }
     return undefined;
+  }
+
+  /** Does `<fsPath>` exist as a subroutine file? An open buffer counts; otherwise
+   *  a stat — so we never read a whole .ngc just to test existence, and a huge
+   *  file or a directory is correctly not treated as a resolvable subroutine. */
+  private fileResolvable(fsPath: string): boolean {
+    if (this.getText(URI.file(fsPath).toString()) !== undefined) return true;
+    try {
+      return fs.statSync(fsPath).isFile();
+    } catch {
+      return false;
+    }
   }
 
   private ownDirOf(fromUri: string): string | undefined {
@@ -230,6 +259,7 @@ export class Project {
     if (text === undefined) {
       this.iniToHal.delete(iniUri);
       this.iniToSubDirs.delete(iniUri);
+      this.iniCanonDir.delete(iniUri);
       return;
     }
     const ini = parseIni(text);
@@ -252,6 +282,9 @@ export class Project {
       if (!set) this.halToInis.set(h.uri, (set = new Set()));
       set.add(iniUri);
     }
+    // Cache the INI's canonical dir so ownership lookups don't realpath it again.
+    const iniDir = this.ownDirOf(iniUri);
+    if (iniDir !== undefined) this.iniCanonDir.set(iniUri, canonPath(iniDir));
   }
 
   /** Drop an INI from the index (file deleted on disk). The delete event's URI may
@@ -279,6 +312,7 @@ export class Project {
     }
     this.iniToHal.delete(iniUri);
     this.iniToSubDirs.delete(iniUri);
+    this.iniCanonDir.delete(iniUri);
   }
 
   private iniBaseName(iniUri: string): string | undefined {
@@ -314,7 +348,7 @@ export class Project {
     let best = -1;
     let owners: string[] = [];
     for (const iniUri of this.iniToHal.keys()) {
-      const iniDir = this.canonDirOf(iniUri);
+      const iniDir = this.iniCanonDir.get(iniUri); // cached; no realpath per INI per call
       if (iniDir === undefined || !isUnder(ngcDir, iniDir)) continue;
       if (iniDir.length > best) {
         best = iniDir.length;
@@ -323,7 +357,9 @@ export class Project {
         owners.push(iniUri);
       }
     }
-    return owners;
+    // Sort tied owners (same enclosing dir) so the pick is deterministic when
+    // activeMachine is unset — resolution can't flip on Map-iteration/save order.
+    return owners.length > 1 ? owners.sort() : owners;
   }
 
   /** Compute the subroutine-resolution scope for a G-code file: the owning config
@@ -352,7 +388,7 @@ export class Project {
     const canonRoots = roots.map(canonPath);
     const out: string[] = [];
     for (const uri of this.workspaceNgcUris()) {
-      const dir = this.canonDirOf(uri);
+      const dir = this.ownDirOf(uri); // stored URIs are canonical -> no realpath needed
       if (dir !== undefined && canonRoots.some((r) => isUnder(dir, r))) out.push(uri);
     }
     return out;
@@ -544,7 +580,10 @@ function scanProjectFiles(root: string, maxDepth: number): { inis: string[]; gco
       if (isDir) { walk(p, depth + 1); continue; }
       const lower = e.name.toLowerCase();
       if (lower.endsWith('.ini')) inis.push(p);
-      else if (GCODE_EXTENSIONS.some((ext) => lower.endsWith(ext))) gcode.push(p);
+      // `real` is the realpath of the containing dir and `e.name` is the true
+      // on-disk casing, so `real/e.name` is already the canonical file path
+      // (matches canonFile without re-statting per file).
+      else if (GCODE_EXTENSIONS.some((ext) => lower.endsWith(ext))) gcode.push(path.join(real, e.name));
     }
   };
   walk(root, 0);
