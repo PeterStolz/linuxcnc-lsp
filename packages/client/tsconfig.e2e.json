@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "test",
+    "outDir": "out",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "noEmit": false,
+    "types": ["node", "vscode", "mocha"],
+    "lib": ["ES2021"]
+  },
+  "include": ["test/**/*.ts"]
+}

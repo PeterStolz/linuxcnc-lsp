@@ -61,7 +61,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
       - name: Run @vscode/test-electron under xvfb
-        run: xvfb-run -a pnpm --filter linuxcnc-lsp run --if-present test:e2e
-        # test:e2e is added in the P6 milestone; --if-present + continue-on-error
-        # keep this a no-op until then.
-        continue-on-error: true
+        # Launches a real VS Code, loads the extension, and drives Format Document
+        # through the live client↔server round trip under different settings
+        # (packages/client/test/suite/format.test.ts). A real gate now.
+        run: xvfb-run -a pnpm --filter linuxcnc-lsp run test:e2e

@@ -131,7 +131,9 @@
   },
   "scripts": {
     "build": "node esbuild.js",
-    "vscode:prepublish": "node esbuild.js --production"
+    "vscode:prepublish": "node esbuild.js --production",
+    "pretest:e2e": "node esbuild.js && tsc -p tsconfig.e2e.json",
+    "test:e2e": "node ./out/runTest.js"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

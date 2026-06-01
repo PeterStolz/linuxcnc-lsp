@@ -11,6 +11,14 @@ import {
 
 let client: LanguageClient | undefined;
 
+/** Returned from `activate` so tests (and other extensions) can await the
+ *  language server becoming ready before issuing requests. */
+export interface LinuxcncApi {
+  client: LanguageClient;
+  /** Resolves once the client has started and the server is initialized. */
+  ready: Promise<void>;
+}
+
 // Sections that identify a LinuxCNC machine INI (vs an unrelated .ini file).
 const MACHINE_SECTION =
   /^\s*\[(EMC|HAL|HALUI|KINS|TRAJ|EMCMOT|EMCIO|DISPLAY|RS274NGC|TASK|AXIS_[A-W]|JOINT_\d+|SPINDLE_\d+|KINEMATICS)\]/im;
@@ -70,7 +78,7 @@ async function selectActiveMachine(): Promise<void> {
   );
 }
 
-export function activate(context: ExtensionContext): void {
+export function activate(context: ExtensionContext): LinuxcncApi {
   // Content-based detection for .ini machine configs.
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((d) => void maybeAssignIni(d)),
@@ -98,7 +106,8 @@ export function activate(context: ExtensionContext): void {
   };
 
   client = new LanguageClient('linuxcnc', 'LinuxCNC Language Server', serverOptions, clientOptions);
-  void client.start();
+  const ready = client.start();
+  return { client, ready };
 }
 
 export async function deactivate(): Promise<void> {
