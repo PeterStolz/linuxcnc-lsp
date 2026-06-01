@@ -1,28 +1,28 @@
 # LinuxCNC for VS Code
 
 **Smart editing and live error-checking for LinuxCNC `.hal`, `.ini`, and `.ngc`
-(G-code) files** — autocomplete, hover docs, go-to-definition, and validation that
+(G-code) files.** Autocomplete, hover docs, go-to-definition, and validation that
 catches config mistakes *as you type*, instead of as a cryptic failure when the
 machine starts.
 
-Works fully offline. No LinuxCNC install required — edit on Windows, macOS, or
-Linux. ([Why offline? →](#privacy-and-offline))
+Works fully offline, with no LinuxCNC install required, on Windows, macOS, or
+Linux. ([Why offline?](#privacy-and-offline))
 
 ![A HAL file with a red squiggle under an INI reference that is not defined, and a hover tooltip explaining the error.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/hero-diagnostics.png)
 
-*Cross-file checks catch bad references as you type — before the machine refuses to start.*
+*Cross-file checks catch bad references as you type, before the machine refuses to start.*
 
 ## Quick start
 
 1. **Install** this extension.
-2. **Open the folder** that holds your machine config — the `.ini` and its `.hal`
-   files together (File → Open Folder). Cross-file checks need the whole config,
-   not a single open file.
+2. **Open the folder** that holds your machine config, meaning the `.ini` and its
+   `.hal` files together (File → Open Folder). Cross-file checks need the whole
+   config, not a single open file.
 3. **Edit.** Mistakes appear as red/yellow squiggles; hover anything for docs;
    Ctrl/Cmd-click a signal, pin, or `[SECTION]KEY` to jump to its definition.
 
-That's it — there's nothing to configure for a single-machine workspace. (Got one
-`.hal` shared by several machines? See [Multiple machines](#multiple-machines-in-one-workspace).)
+There's nothing to configure for a single-machine workspace. (Got one `.hal`
+shared by several machines? See [Multiple machines](#multiple-machines-in-one-workspace).)
 
 ## Features
 
@@ -32,9 +32,9 @@ That's it — there's nothing to configure for a single-machine workspace. (Got 
   pin**, type conflicts (e.g. a `bit` pin linked to a `float` signal), and signals
   with **no writer, no reader, or two writers** fighting over one signal.
 - **`[SECTION]KEY` cross-checks:** a HAL reference to an INI constant is verified
-  against the actual INI — and flagged (with a quick-fix) when the key is missing.
+  against the actual INI, and flagged (with a quick-fix) when the key is missing.
 - **Navigate:** go-to-definition, find-references, rename, and document outline for
-  signals, named component instances, and INI references — across every HAL file of
+  signals, named component instances, and INI references, across every HAL file of
   the machine.
 - **Autocomplete:** halcmd commands, `loadrt` component names and module
   parameters, `addf` functions/threads, signal names, and component pins (incl.
@@ -60,7 +60,7 @@ That's it — there's nothing to configure for a single-machine workspace. (Got 
 
 - Hover docs for ~229 G/M/F/S/T words and parameter explanations (numbered, named,
   and global `#<_…>` params); completion of G/M codes and O-word keywords.
-- **O-word subroutines:** go-to-definition and find-references — including
+- **O-word subroutines:** go-to-definition and find-references, including
   **cross-file** `.ngc` subroutines resolved via the INI subroutine search path
   (`[RS274NGC]SUBROUTINES`, `[DISPLAY]PROGRAM_PREFIX`).
 - Document outline and folding for subroutine / control-flow blocks.
@@ -71,7 +71,7 @@ That's it — there's nothing to configure for a single-machine workspace. (Got 
 
 ![A G-code subroutine file showing O-word sub / if / endif structure with a hover tooltip documenting the G38.2 probe word.](https://raw.githubusercontent.com/PeterStolz/linuxcnc-lsp/main/packages/client/images/gcode-subroutines.png)
 
-*O-word subroutines with full control-flow structure, plus hover docs for every G/M-code — and go-to-definition, folding, formatting, and structural checks on top.*
+*O-word subroutines with full control-flow structure, plus hover docs for every G/M-code, with go-to-definition, folding, formatting, and structural checks on top.*
 
 The G-code dialect is **LinuxCNC RS274NGC**. The hover docs and the O-word checks
 assume that dialect; if you mainly write Grbl, Fanuc, or Marlin G-code, a generic
@@ -82,10 +82,10 @@ LinuxCNC-specific O-word diagnostics won't apply to those dialects).
 
 | You… | This extension |
 |------|----------------|
-| edit LinuxCNC `.hal` / `.ini` by hand | ✅ its core purpose — validation, hover, navigation |
+| edit LinuxCNC `.hal` / `.ini` by hand | ✅ its core purpose: validation, hover, navigation |
 | write LinuxCNC `.ngc` subroutines | ✅ outline, cross-file nav, formatter, structural checks |
-| run Mesa hostmot2 / many machine configs | ✅ `config=` completion, custom `.comp`, [active-machine pinning](#multiple-machines-in-one-workspace) |
-| want a 3D toolpath backplot / preview | ❌ not provided — use Axis, CAMotics, or your CAM |
+| run Mesa hostmot2 or many machine configs | ✅ `config=` completion, custom `.comp`, [active-machine pinning](#multiple-machines-in-one-workspace) |
+| want a 3D toolpath backplot or preview | ❌ not provided; use Axis, CAMotics, or your CAM |
 | write Grbl / Fanuc / Marlin G-code | ⚠️ highlighting works; LinuxCNC-specific checks won't apply |
 
 ## Settings
@@ -102,7 +102,7 @@ LinuxCNC-specific O-word diagnostics won't apply to those dialects).
 
 ## Limitations
 
-This is **static analysis** — it reads your files, it does not run LinuxCNC. So:
+This is **static analysis**: it reads your files, it does not run LinuxCNC. So:
 
 - **It can't see runtime-loaded code.** Pins/signals created by **Tcl or userspace
   components** are invisible to the model, which can produce advisory "signal has no
@@ -112,17 +112,17 @@ This is **static analysis** — it reads your files, it does not run LinuxCNC. S
 - **Metadata is pinned to one LinuxCNC version** (currently **2.10.0~pre1**; see
   `metadata-source.json`). Components/pins/docs reflect that version. On a very
   different version, regenerate the DB and point `linuxcnc.metadata.path` at it.
-- **No 3D backplot / toolpath preview** and **no machine-limit checks** (e.g. feed
-  rate vs. axis max velocity). Use Axis/CAMotics for visualization.
+- **No 3D backplot or toolpath preview** and **no machine-limit checks** (such as
+  feed rate vs. axis max velocity). Use Axis/CAMotics for visualization.
 - **G-code is LinuxCNC RS274NGC only** (see the G-code note above).
-- **G-code expressions aren't evaluated** — `#10 = [#1 + #2]` is parsed for
+- **G-code expressions aren't evaluated.** `#10 = [#1 + #2]` is parsed for
   structure, not checked for undefined parameters or math errors.
 - **A `.hal` shared by multiple machines** uses the first machine found unless you
-  pin one — see the next section.
+  pin one (see the next section).
 
 Found a false positive or a miss? Please
-[open an issue](https://github.com/PeterStolz/linuxcnc-lsp/issues) with the snippet
-— that's exactly what improves it.
+[open an issue](https://github.com/PeterStolz/linuxcnc-lsp/issues) with the snippet;
+that's exactly what improves it.
 
 ## Privacy and offline
 
@@ -131,7 +131,7 @@ Found a false positive or a miss? Please
   database, so everything works with no LinuxCNC, no `halcmd`, and no network.
 - **No telemetry, no network calls.** The extension collects nothing and phones
   nowhere; documentation is bundled. (Some hovers include a link to the online
-  LinuxCNC manual — that only opens in your browser if *you* click it.)
+  LinuxCNC manual, which only opens in your browser if *you* click it.)
 - **It won't hijack your `.ini` files.** A `.ini` is treated as a LinuxCNC machine
   config only when its content has machine sections (`[EMC]`, `[HAL]`, `[KINS]`, …);
   set `linuxcnc.iniDetection` to `extension` or `off` to change that.
@@ -145,7 +145,7 @@ Found a false positive or a miss? Please
   Set `linuxcnc.iniDetection` to `extension`, or pick **LinuxCNC INI** from the
   language menu (bottom-right of the status bar).
 - **A `[SECTION]KEY` is flagged "missing" but it exists.** The `.hal` is probably
-  shared by several machines and the wrong one was picked — see
+  shared by several machines and the wrong one was picked. See
   [Multiple machines](#multiple-machines-in-one-workspace).
 - **"Unknown component" for something real.** It may be newer than the bundled
   2.10.0~pre1 DB, or a custom `.comp`/Tcl component. Workspace `.comp` files are
@@ -176,23 +176,23 @@ Every check has a stable rule id you can re-target with
 ## Multiple machines in one workspace
 
 Cross-file features (the `[SECTION]KEY` check, hover, go-to-definition, completion)
-need to know which **machine** a `.hal` file belongs to — a machine is one `.ini`
+need to know which **machine** a `.hal` file belongs to. A machine is one `.ini`
 plus all the `.hal` files it pulls in via `[HAL]HALFILE`. Usually that mapping is
 unambiguous: one `.ini`, its own `.hal` files, and you can skip this section.
 
-It gets ambiguous when **the same `.hal` is pulled in by two or more `.ini` files**
-— very common in the LinuxCNC sample configs. In `configs/sim/axis`, for instance,
-`core_sim.hal` is shared by `axis.ini`, `axis_mm.ini` (metric) and
+It gets ambiguous when **the same `.hal` is pulled in by two or more `.ini` files**,
+which is very common in the LinuxCNC sample configs. In `configs/sim/axis`, for
+instance, `core_sim.hal` is shared by `axis.ini`, `axis_mm.ini` (metric) and
 `historical_lathe.ini`. Open `core_sim.hal` and the extension has three candidate
 machines; with no pin it just uses the **first one it finds**.
 
 ### How you'll notice
 
-There's no popup — the symptom is *wrong cross-file results in a shared `.hal`*:
+There's no popup; the symptom is *wrong cross-file results in a shared `.hal`*:
 
-- a `[SECTION]KEY` reference flagged as **missing** even though it exists — because
+- a `[SECTION]KEY` reference flagged as **missing** even though it exists, because
   the value lives in the *other* machine's INI, not the one that was picked;
-- hover / go-to-definition on an INI reference jumping to the wrong machine's value
+- hover or go-to-definition on an INI reference jumping to the wrong machine's value
   (e.g. inch vs. mm).
 
 If a shared `.hal` looks wrong, that's the cue to pin the machine you actually mean.
@@ -206,7 +206,7 @@ Run **LinuxCNC: Select Active Machine** from the Command Palette
 2. pick the one whose context you want (or **None** to clear the pin);
 3. it writes `linuxcnc.activeMachine` to your workspace `.vscode/settings.json`.
 
-The server re-resolves immediately — no reload needed. You can also write the
+The server re-resolves immediately, with no reload needed. You can also write the
 setting by hand:
 
 ```jsonc
@@ -221,19 +221,19 @@ setting by hand:
 The value is matched by path suffix, so use the shortest form that's unambiguous
 in your workspace:
 
-- a bare file name — `"Flexicam_qtdragon.ini"`
-- a workspace-relative path — `"configs/sim/Flexicam.ini"`
-- an absolute path — `"/home/cnc/linuxcnc/configs/flexicam/Flexicam.ini"`
+- a bare file name, `"Flexicam_qtdragon.ini"`
+- a workspace-relative path, `"configs/sim/Flexicam.ini"`
+- an absolute path, `"/home/cnc/linuxcnc/configs/flexicam/Flexicam.ini"`
 
 Leave it empty (`""`) to go back to "first machine found".
 
 ### What the pin does (and doesn't) do
 
 - It's **one pin per workspace**, not per file. Whenever a `.hal` is shared, the
-  pinned machine wins — *as long as that machine actually pulls in this `.hal`*. If
+  pinned machine wins, *as long as that machine actually pulls in this `.hal`*. If
   the pinned machine doesn't own a given shared file, that file falls back to its
   first owner, so the pin never makes things worse.
-- `.hal` files owned by exactly one machine are unaffected — pinning only matters
+- `.hal` files owned by exactly one machine are unaffected; pinning only matters
   for shared files.
 - Working across machine families that don't share files? Re-run the command to
   switch the pin as you move between them.
