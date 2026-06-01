@@ -356,3 +356,61 @@ describe('fuzz-hardening: path traversal, symlinks, case canonicalization', () =
     expect(project.ngcUrisUnderRoots(scope.universeRoots)).toContain(resolved!);
   });
 });
+
+describe('project.ts edge cases (canonicalization, watcher deltas, scan robustness)', () => {
+  it('canonicalUri returns the realpath-canonical form of a file URI', () => {
+    write('d/x.ngc', SUB('x'));
+    const project = newProject();
+    expect(project.canonicalUri(uriOf('d/x.ngc'))).toBe(uriOf('d/x.ngc'));
+  });
+
+  it('readFileText reads disk + open docs, undefined for missing', () => {
+    write('r/a.ngc', 'hello\n');
+    const openUri = uriOf('r/live.ngc');
+    const project = new Project((u) => (u === openUri ? 'live' : undefined), () => undefined);
+    expect(project.readFileText(uriOf('r/a.ngc'))).toBe('hello\n');
+    expect(project.readFileText(openUri)).toBe('live');
+    expect(project.readFileText(uriOf('r/missing.ngc'))).toBeUndefined();
+  });
+
+  it('resolves an open-only (unsaved) sub whose directory is not on disk (canon fallback)', () => {
+    const caller = uriOf('virt/main.ngc');
+    const sub = uriOf('virt/sub.ngc'); // exists only in-memory, dir never created
+    const project = new Project((u) => (u === sub ? 'o<sub> sub\no<sub> endsub\n' : undefined), () => undefined);
+    expect(project.resolveSubroutineScoped(caller, 'sub', [])).toBe(sub);
+  });
+
+  it('removeNgc / removeIni are no-ops for never-indexed URIs', () => {
+    const project = newProject();
+    expect(() => project.removeNgc(uriOf('nope/x.ngc'))).not.toThrow();
+    expect(() => project.removeIni(uriOf('nope/x.ini'))).not.toThrow();
+  });
+
+  it('ngcUrisUnderRoots returns empty when there are no roots', () => {
+    const project = newProject();
+    project.scanRoots([root]);
+    expect(project.ngcUrisUnderRoots([])).toEqual([]);
+  });
+
+  it('the scan skips dot-directories and node_modules', () => {
+    write('.hidden/secret.ngc', SUB('secret'));
+    write('node_modules/pkg/mod.ngc', SUB('mod'));
+    write('real/keep.ngc', SUB('keep'));
+    const project = newProject();
+    project.scanRoots([root]);
+    const uris = project.workspaceNgcUris();
+    expect(uris).toContain(uriOf('real/keep.ngc'));
+    expect(uris).not.toContain(uriOf('.hidden/secret.ngc'));
+    expect(uris.some((u) => u.includes('node_modules'))).toBe(false);
+  });
+
+  it('the scan tolerates a broken symlink and a directory symlink loop without throwing', () => {
+    write('s/real.ngc', SUB('real'));
+    fs.symlinkSync(path.join(root, 's', 'gone'), path.join(root, 's', 'broken.ngc')); // dangling
+    fs.mkdirSync(path.join(root, 'loopdir'), { recursive: true });
+    fs.symlinkSync(path.join(root, 'loopdir'), path.join(root, 'loopdir', 'self')); // dir -> itself
+    const project = newProject();
+    expect(() => project.scanRoots([root])).not.toThrow();
+    expect(project.workspaceNgcUris()).toContain(uriOf('s/real.ngc'));
+  });
+});
