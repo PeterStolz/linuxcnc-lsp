@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.6...v0.1.7) (2026-06-01)
+
+
+### Features
+
+* **gcode:** formatter preserves trailing/blank whitespace by default (closes [#11](https://github.com/PeterStolz/linuxcnc-lsp/issues/11)) ([#17](https://github.com/PeterStolz/linuxcnc-lsp/issues/17)) ([c5c033c](https://github.com/PeterStolz/linuxcnc-lsp/commit/c5c033c081ac2ae3e25c14ac122a898ca15e7c02))
+
 ## [0.1.6](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.5...v0.1.6) (2026-06-01)
 
 

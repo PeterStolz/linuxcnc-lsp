@@ -1,6 +1,6 @@
 {
   "name": "linuxcnc-lsp-monorepo",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "Language Server + VSCode extension for LinuxCNC HAL, INI and G-code files",
   "license": "GPL-2.0-or-later",
