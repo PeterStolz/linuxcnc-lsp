@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.5...v0.1.6) (2026-06-01)
+
+
+### Miscellaneous Chores
+
+* release 0.1.6 (refresh marketplace listing) ([#13](https://github.com/PeterStolz/linuxcnc-lsp/issues/13)) ([d944286](https://github.com/PeterStolz/linuxcnc-lsp/commit/d944286ef7243f85ac454ec6da0b3511e5fc75d2))
+
 ## [0.1.5](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.4...v0.1.5) (2026-05-31)
 
 
