@@ -14,6 +14,11 @@ async function main(): Promise<void> {
     const workspace = path.resolve(__dirname, '../test/fixtures/workspace');
 
     await runTests({
+      // Pin the VS Code version for reproducible runs (a new stable release can't
+      // turn the gate red with no code change); override with LCNC_VSCODE_VERSION.
+      // The default is the extension's engines floor, so e2e also proves we rely
+      // on no newer VS Code API.
+      version: process.env.LCNC_VSCODE_VERSION || '1.100.0',
       extensionDevelopmentPath,
       extensionTestsPath,
       launchArgs: [workspace, '--disable-extensions', '--disable-workspace-trust'],

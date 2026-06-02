@@ -30,7 +30,10 @@ export function classifyOword(raw: string, start: number, end: number): OWordRef
   const body = raw.slice(1); // drop leading o/O
   if (body.startsWith('<')) {
     const close = body.indexOf('>');
-    const inner = (close >= 0 ? body.slice(1, close) : body.slice(1)).trim();
+    // RS274NGC ignores spaces/tabs inside an o-word name, so `o< probe >`,
+    // `o<probe>` and `o<pr obe>` all denote the same subroutine — strip them all,
+    // not just the ends, so the match key and file resolution agree.
+    const inner = (close >= 0 ? body.slice(1, close) : body.slice(1)).replace(/[ \t]+/g, '');
     return { raw, form: 'named', name: inner || undefined, key: inner ? inner.toLowerCase() : undefined, start, end };
   }
   if (body.startsWith('[')) return { raw, form: 'computed', start, end };
@@ -64,12 +67,17 @@ function collectStatements(
       });
       i++; // consume the keyword token
     } else {
-      // An O-word with no recognized keyword is not a valid statement.
-      problems.push({
-        code: R.missingKeyword,
-        start: t.start, end: t.end,
-        message: `O-word '${t.text}' is not followed by a keyword (sub, call, if, while, ...).`,
-      });
+      // An O-word with no recognized keyword. A bare NUMBERED o-word (e.g. O1000)
+      // is the Fanuc/ISO program-number header CAM posts emit on the first line —
+      // not a LinuxCNC o-word mistake — so don't warn on it. A bare named `o<...>`
+      // is an incomplete statement worth flagging.
+      if (classifyOword(t.text, t.start, t.end).form !== 'numbered') {
+        problems.push({
+          code: R.missingKeyword,
+          start: t.start, end: t.end,
+          message: `O-word '${t.text}' is not followed by a keyword (sub, call, if, while, ...).`,
+        });
+      }
     }
   }
   return out;

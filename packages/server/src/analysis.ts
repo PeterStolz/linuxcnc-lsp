@@ -9,6 +9,7 @@ import {
   formatGcode, GcodeFormatOptions,
 } from '@linuxcnc/core';
 import { DocumentSymbol, FoldingRange, TextEdit } from 'vscode-languageserver';
+import { isGcodePath } from './gcodeFiles';
 
 export type DocKind = 'hal' | 'ini' | 'gcode';
 
@@ -16,7 +17,7 @@ export function docKindFromUri(uri: string): DocKind | undefined {
   const u = uri.toLowerCase();
   if (u.endsWith('.hal')) return 'hal';
   if (u.endsWith('.ini')) return 'ini';
-  if (u.endsWith('.ngc') || u.endsWith('.nc') || u.endsWith('.gcode')) return 'gcode';
+  if (isGcodePath(u)) return 'gcode';
   return undefined;
 }
 

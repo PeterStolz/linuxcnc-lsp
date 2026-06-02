@@ -23,6 +23,8 @@ export * from './gcode/ast';
 export { formatGcode, GcodeFormatOptions } from './gcode/format';
 export {
   gcodeOwordAt, gcodeDefinition, gcodeReferences, gcodeDocumentHighlights,
+  gcodeRenameTarget, owordNameRange, isValidOwordName, gcodeRenameRangesInFile,
+  gcodeReferenceRangesInFile,
 } from './gcode/navigation';
 
 // Diagnostics

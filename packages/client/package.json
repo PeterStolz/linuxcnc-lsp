@@ -9,7 +9,7 @@
   "private": true,
   "type": "commonjs",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.100.0"
   },
   "categories": ["Programming Languages", "Linters", "Formatters"],
   "keywords": [
@@ -97,7 +97,13 @@
         "linuxcnc.activeMachine": {
           "type": "string",
           "default": "",
-          "markdownDescription": "When a `.hal` file is shared by more than one machine (`.ini`), pin which machine provides its context — diagnostics, hover, go-to-definition/references, and completion all use the pinned machine. Set to the INI's file name or a workspace-relative path, e.g. `MachineA.ini` or `configs/a/MachineA.ini` (not a `${workspaceFolder}` variable — VS Code does not expand it here). Empty = use the first machine found. Tip: run **LinuxCNC: Select Active Machine** to pick from a list."
+          "markdownDescription": "When a file is shared by more than one machine (`.ini`), pin which machine provides its context. For a shared `.hal`: diagnostics, hover, go-to-definition/references, and completion use the pinned machine. For G-code: when several machine configs enclose a `.ngc` file, the pinned machine's subroutine search path (`PROGRAM_PREFIX` + `SUBROUTINES`) decides where `o<name>` calls resolve and which files find-references scans. Set to the INI's file name or a workspace-relative path, e.g. `MachineA.ini` or `configs/a/MachineA.ini` (not a `${workspaceFolder}` variable — VS Code does not expand it here). Empty = use the first machine found. Tip: run **LinuxCNC: Select Active Machine** to pick from a list."
+        },
+        "linuxcnc.scan.maxDepth": {
+          "type": "number",
+          "default": 8,
+          "minimum": 1,
+          "markdownDescription": "Maximum directory depth scanned (from each workspace folder) when indexing `.ini` and `.ngc` files for cross-file features. Raise it if deeply nested machine configs are not picked up; lower it to speed up the initial scan of a very large monorepo."
         },
         "linuxcnc.iniDetection": {
           "type": "string",
@@ -140,8 +146,8 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.100.0",
     "@vscode/test-electron": "^2.4.1",
-    "mocha": "^10.7.0"
+    "mocha": "^11.0.0"
   }
 }

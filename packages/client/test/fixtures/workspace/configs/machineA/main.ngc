@@ -1,0 +1,4 @@
+(machine A main program)
+G21 G90
+o<probe> call
+M2

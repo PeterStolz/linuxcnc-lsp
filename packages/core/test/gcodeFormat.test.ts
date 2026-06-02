@@ -27,6 +27,21 @@ const fmt = (text: string, o: Opts = {}): string => apply(text, editsOf(text, o)
 const lines = (s: string): string[] => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 const stripLead = (l: string): string => l.replace(/^[ \t]+/, '');
 
+describe('formatGcode — line-ending safety', () => {
+  it('trim mode never fuses a bare CR + LF into one line (preserves line count)', () => {
+    // "a" | "\t" | "" — the bare CR is its own line break; trimming the middle
+    // whitespace-only line must not let the CR adjoin the LF and drop a line.
+    const src = 'a\r\t\n';
+    const out = fmt(src, { trim: true });
+    expect(new LineIndex(out).lineCount).toBe(new LineIndex(src).lineCount);
+    expect(out).toContain('a');
+  });
+
+  it('trim mode still empties a normal whitespace-only LF line', () => {
+    expect(fmt('G0 X1\n   \nM2\n', { trim: true })).toBe('G0 X1\n\nM2\n');
+  });
+});
+
 describe('formatGcode — indentation (unchanged behavior)', () => {
   it('indents a subroutine body by one level', () => {
     const src = 'o<p> sub\nG1 X1\no<p> endsub\n';

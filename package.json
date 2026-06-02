@@ -6,7 +6,7 @@
   "license": "GPL-2.0-or-later",
   "packageManager": "pnpm@10.28.0",
   "engines": {
-    "node": ">=18",
+    "node": ">=20",
     "pnpm": ">=10"
   },
   "scripts": {
@@ -18,21 +18,27 @@
     "lint": "eslint .",
     "gen:db": "tsx scripts/regenerate-db.ts",
     "corpus": "tsx scripts/corpus-check.ts",
+    "knip": "knip",
     "package": "pnpm run build && cd packages/client && vsce package --no-dependencies -o ../../linuxcnc-lsp.vsix"
   },
   "devDependencies": {
+    "@linuxcnc/core": "workspace:*",
     "@types/node": "^20.14.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "^4.0.0",
     "@vscode/vsce": "^3.9.1",
-    "esbuild": "^0.23.0",
-    "eslint": "^9.9.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^10.0.0",
+    "knip": "^5.88.0",
     "tsx": "^4.16.0",
-    "typescript": "^5.5.0",
-    "vitest": "^2.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0",
+    "vscode-languageserver-types": "^3.17.5",
     "vscode-oniguruma": "^2.0.1",
-    "vscode-textmate": "^9.3.2"
+    "vscode-textmate": "^9.3.2",
+    "vscode-uri": "^3.0.8"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

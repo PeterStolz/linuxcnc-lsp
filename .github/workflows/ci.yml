@@ -6,19 +6,24 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel an in-flight run when new commits land on the same ref (don't pile up).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
     name: pre-commit (format, actionlint, gitleaks, eslint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - uses: pre-commit/action@v3.0.1
@@ -27,14 +32,15 @@ jobs:
     name: Typecheck, unit + golden corpus, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
+      - run: pnpm run knip
 
       # continue-on-error lets the coverage upload below run even on a red test
       # run (vitest's reportOnFailure keeps writing coverage/lcov.info); the gate
@@ -66,17 +72,31 @@ jobs:
   e2e:
     name: VSCode integration tests
     runs-on: ubuntu-latest
+    # A hung extension host shouldn't burn the 6h default; the suite runs in well
+    # under a minute once VS Code is downloaded.
+    timeout-minutes: 20
+    env:
+      # Pin the VS Code build so a new stable release can't turn the gate red with
+      # no code change; this is the engines floor, so e2e also proves we use no
+      # newer API. runTest.ts reads the same var.
+      LCNC_VSCODE_VERSION: '1.100.0'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Cache the downloaded VS Code build so each run doesn't re-fetch ~150MB.
+      - name: Cache VS Code for @vscode/test-electron
+        uses: actions/cache@v4
+        with:
+          path: packages/client/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ env.LCNC_VSCODE_VERSION }}
       - run: pnpm run build
       - name: Run @vscode/test-electron under xvfb
-        # Launches a real VS Code, loads the extension, and drives Format Document
-        # through the live client↔server round trip under different settings
-        # (packages/client/test/suite/format.test.ts). A real gate now.
+        # Launches a real VS Code, loads the extension, and drives Format Document,
+        # multi-machine go-to-def/find-references, and o-word rename through the
+        # live client↔server round trip (packages/client/test/suite/*.test.ts).
         run: xvfb-run -a pnpm --filter linuxcnc-lsp run test:e2e

@@ -96,13 +96,18 @@ export function activate(context: ExtensionContext): LinuxcncApi {
     },
   };
 
+  // Watch config files across the workspace so the server reindexes when a
+  // machine config is created/deleted/changed on disk (not just in open editors).
+  const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{ini,hal,ngc,nc,gcode,tap}');
+  context.subscriptions.push(fileWatcher);
+
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
       { scheme: 'file', language: 'hal' },
       { scheme: 'file', language: 'linuxcnc-ini' },
       { scheme: 'file', language: 'gcode' },
     ],
-    synchronize: {},
+    synchronize: { fileEvents: fileWatcher },
   };
 
   client = new LanguageClient('linuxcnc', 'LinuxCNC Language Server', serverOptions, clientOptions);

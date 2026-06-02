@@ -1,0 +1,4 @@
+(machine B probe: deep plunge, different feed)
+o<probe> sub
+G38.2 Z-99 F10
+o<probe> endsub

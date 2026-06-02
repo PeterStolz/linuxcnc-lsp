@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "**/test/**"
+  ],
+  "ignoreDependencies": [
+    "vscode-oniguruma",
+    "vscode-textmate",
+    "@vscode/test-electron"
+  ],
+  "paths": {
+    "@linuxcnc/core": ["packages/core/src/index.ts"],
+    "@linuxcnc/core/*": ["packages/core/src/*"],
+    "@linuxcnc/metadata": ["packages/metadata/src/index.ts"],
+    "@linuxcnc/metadata/*": ["packages/metadata/src/*"]
+  },
+  "workspaces": {
+    ".": { "entry": ["scripts/**/*.ts"] },
+    "packages/client": { "entry": ["src/extension.ts"] }
+  }
+}

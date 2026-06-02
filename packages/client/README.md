@@ -60,9 +60,11 @@ shared by several machines? See [Multiple machines](#multiple-machines-in-one-wo
 
 - Hover docs for ~229 G/M/F/S/T words and parameter explanations (numbered, named,
   and global `#<_…>` params); completion of G/M codes and O-word keywords.
-- **O-word subroutines:** go-to-definition and find-references, including
-  **cross-file** `.ngc` subroutines resolved via the INI subroutine search path
-  (`[RS274NGC]SUBROUTINES`, `[DISPLAY]PROGRAM_PREFIX`).
+- **O-word subroutines:** go-to-definition, find-references, and **rename**,
+  including **cross-file** `.ngc` subroutines resolved via the INI subroutine
+  search path (`[RS274NGC]SUBROUTINES`, `[DISPLAY]PROGRAM_PREFIX`). Rename updates
+  every `o<name>` in the calling machine's config and never touches another
+  machine's identically-named subroutine.
 - Document outline and folding for subroutine / control-flow blocks.
 - A **formatter** that indents `sub`/`if`/`while`/`do`/`repeat` blocks by nesting
   depth (Format Document). It only rewrites **leading indentation**; your trailing
