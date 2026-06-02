@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.7...v0.1.8) (2026-06-02)
+
+
+### Features
+
+* **server:** per-config G-code subroutine scoping + incremental indexing ([#21](https://github.com/PeterStolz/linuxcnc-lsp/issues/21)) ([ebde913](https://github.com/PeterStolz/linuxcnc-lsp/commit/ebde913aa56ae8c3f0450f1d6adf116ff04e22b1))
+
 ## [0.1.7](https://github.com/PeterStolz/linuxcnc-lsp/compare/v0.1.6...v0.1.7) (2026-06-01)
 
 
